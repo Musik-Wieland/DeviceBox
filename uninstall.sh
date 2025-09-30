@@ -105,7 +105,8 @@ main() {
     # Confirmation
     echo
     warning "Dies wird DeviceBox vollständig von Ihrem System entfernen!"
-    read -p "Möchten Sie fortfahren? (y/N): " -n 1 -r
+    echo -n "Möchten Sie fortfahren? (y/N): "
+    read -r REPLY
     echo
     
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
