@@ -115,14 +115,28 @@ install_devicebox() {
     # Clone repository (fallback to local files if not available)
     if command -v git &> /dev/null; then
         log "Klone Repository..."
-        git clone https://github.com/yourusername/devicebox.git . || {
-            warning "Repository nicht verfügbar, verwende lokale Dateien..."
-            # Copy local files if git clone fails
-            cp -r /tmp/devicebox/* . 2>/dev/null || {
-                error "Keine lokalen Dateien gefunden"
-                exit 1
+        
+        # Check for GitHub token for private repositories
+        if [[ -n "$GITHUB_TOKEN" ]]; then
+            log "Verwende GitHub Token für privates Repository..."
+            git clone https://${GITHUB_TOKEN}@github.com/yourusername/devicebox.git . || {
+                warning "Repository nicht verfügbar, verwende lokale Dateien..."
+                # Copy local files if git clone fails
+                cp -r /tmp/devicebox/* . 2>/dev/null || {
+                    error "Keine lokalen Dateien gefunden"
+                    exit 1
+                }
             }
-        }
+        else
+            git clone https://github.com/yourusername/devicebox.git . || {
+                warning "Repository nicht verfügbar, verwende lokale Dateien..."
+                # Copy local files if git clone fails
+                cp -r /tmp/devicebox/* . 2>/dev/null || {
+                    error "Keine lokalen Dateien gefunden"
+                    exit 1
+                }
+            }
+        fi
     else
         error "Git ist nicht installiert"
         exit 1

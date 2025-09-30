@@ -44,7 +44,14 @@ class UpdateManager:
         try:
             # GitHub API für neueste Release
             api_url = "https://api.github.com/repos/yourusername/devicebox/releases/latest"
-            response = requests.get(api_url, timeout=10)
+            
+            # Für private Repositories: GitHub Token verwenden
+            headers = {}
+            github_token = os.getenv('GITHUB_TOKEN')
+            if github_token:
+                headers['Authorization'] = f'token {github_token}'
+            
+            response = requests.get(api_url, headers=headers, timeout=10)
             
             if response.status_code == 200:
                 release_data = response.json()
@@ -99,8 +106,15 @@ class UpdateManager:
             if os.path.exists(temp_dir):
                 shutil.rmtree(temp_dir)
             
-            # Repository klonen
-            repo = Repo.clone_from(self.repo_url, temp_dir)
+            # Repository klonen (mit Token für private Repos)
+            github_token = os.getenv('GITHUB_TOKEN')
+            if github_token:
+                # Private Repository mit Token
+                repo_url_with_token = self.repo_url.replace('https://', f'https://{github_token}@')
+                repo = Repo.clone_from(repo_url_with_token, temp_dir)
+            else:
+                # Öffentliches Repository
+                repo = Repo.clone_from(self.repo_url, temp_dir)
             
             # Dateien kopieren (außer Konfigurationsdateien)
             exclude_files = ['config.json', 'data/', 'logs/', 'backup/']
