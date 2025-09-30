@@ -176,7 +176,7 @@ class DeviceBoxUpdater:
             # Service stoppen (nur auf Raspberry Pi)
             if self.is_raspberry_pi():
                 logger.info("Stoppe DeviceBox Service...")
-                subprocess.run(['sudo', 'systemctl', 'stop', 'devicebox'], check=True)
+                self.run_sudo_command(['systemctl', 'stop', 'devicebox'])
             
             # Backup erstellen
             backup_dir = self.create_backup()
@@ -206,14 +206,13 @@ class DeviceBoxUpdater:
             # Service neu starten (nur auf Raspberry Pi)
             if self.is_raspberry_pi():
                 logger.info("Starte DeviceBox Service neu...")
-                subprocess.run(['sudo', 'systemctl', 'daemon-reload'], check=True)
-                subprocess.run(['sudo', 'systemctl', 'start', 'devicebox'], check=True)
+                self.run_sudo_command(['systemctl', 'daemon-reload'])
+                self.run_sudo_command(['systemctl', 'start', 'devicebox'])
                 
                 # Service-Status prüfen
                 import time
                 time.sleep(3)
-                result = subprocess.run(['sudo', 'systemctl', 'is-active', 'devicebox'], 
-                                      capture_output=True, text=True)
+                result = self.run_sudo_command(['systemctl', 'is-active', 'devicebox'], capture_output=True)
                 if result.returncode != 0 or 'active' not in result.stdout:
                     raise Exception("Service konnte nicht gestartet werden")
             
@@ -267,15 +266,15 @@ class DeviceBoxUpdater:
             service_user = os.getenv('SERVICE_USER', 'pi')
             logger.info(f"Setze Berechtigungen für Benutzer: {service_user}")
             
-            subprocess.run(['sudo', 'chown', '-R', f'{service_user}:{service_user}', 
-                          str(self.install_dir)], check=True)
+            self.run_sudo_command(['chown', '-R', f'{service_user}:{service_user}', 
+                          str(self.install_dir)])
             
             # Ausführbare Berechtigungen
             executable_files = ['app.py', 'update_system.py', 'device_manager.py']
             for file in executable_files:
                 file_path = self.install_dir / file
                 if file_path.exists():
-                    subprocess.run(['sudo', 'chmod', '+x', str(file_path)], check=True)
+                    self.run_sudo_command(['chmod', '+x', str(file_path)])
             
         except Exception as e:
             logger.warning(f"Fehler beim Setzen der Berechtigungen: {e}")
@@ -308,7 +307,7 @@ class DeviceBoxUpdater:
                 shutil.move(old_dir, str(self.install_dir))
             
             if self.is_raspberry_pi():
-                subprocess.run(['sudo', 'systemctl', 'start', 'devicebox'], check=False)
+                self.run_sudo_command(['systemctl', 'start', 'devicebox'], check=False)
             
             logger.info("Rollback erfolgreich")
             
@@ -318,6 +317,27 @@ class DeviceBoxUpdater:
     def is_raspberry_pi(self):
         """Prüft ob wir auf einem Raspberry Pi sind"""
         return os.path.exists('/etc/os-release') and 'raspbian' in open('/etc/os-release').read().lower()
+    
+    def run_sudo_command(self, command, check=True, capture_output=False):
+        """Führt einen Befehl mit sudo aus, falls verfügbar"""
+        try:
+            # Prüfe ob sudo verfügbar ist
+            if shutil.which('sudo'):
+                cmd = ['sudo'] + command
+            else:
+                # Fallback: Versuche ohne sudo (falls bereits als root)
+                cmd = command
+                logger.warning("sudo nicht verfügbar, führe Befehl ohne sudo aus")
+            
+            return subprocess.run(cmd, check=check, capture_output=capture_output, text=True)
+            
+        except FileNotFoundError:
+            # Falls sudo nicht gefunden wird, versuche ohne sudo
+            logger.warning("sudo nicht gefunden, führe Befehl ohne sudo aus")
+            return subprocess.run(command, check=check, capture_output=capture_output, text=True)
+        except Exception as e:
+            logger.error(f"Fehler beim Ausführen des Befehls: {e}")
+            raise
     
     def perform_update(self):
         """Komplettes Update durchführen"""
