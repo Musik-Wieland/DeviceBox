@@ -9,7 +9,7 @@ User=pi
 Group=pi
 WorkingDirectory=/opt/devicebox
 Environment=PATH=/opt/devicebox/venv/bin
-Environment=GITHUB_REPO=your-username/devicebox
+Environment=GITHUB_REPO=Musik-Wieland/DeviceBox
 Environment=APP_NAME=devicebox
 Environment=INSTALL_DIR=/opt/devicebox
 Environment=DATA_DIR=/opt/devicebox/data

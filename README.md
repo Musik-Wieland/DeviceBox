@@ -17,14 +17,14 @@ Ein modernes, Apple-inspiriertes Management-System für Raspberry Pi mit automat
 ### Schnellinstallation
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/your-username/devicebox/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Musik-Wieland/DeviceBox/main/install.sh | bash
 ```
 
 ### Manuelle Installation
 
 1. Repository klonen:
 ```bash
-git clone https://github.com/your-username/devicebox.git
+git clone https://github.com/Musik-Wieland/DeviceBox.git
 cd devicebox
 ```
 
@@ -39,7 +39,7 @@ chmod +x install.sh
 Vor der Installation können Umgebungsvariablen gesetzt werden:
 
 ```bash
-export GITHUB_REPO="your-username/devicebox"
+export GITHUB_REPO="Musik-Wieland/DeviceBox"
 export APP_NAME="devicebox"
 export INSTALL_DIR="/opt/devicebox"
 export SERVICE_USER="pi"
@@ -127,7 +127,7 @@ devicebox/
 
 | Variable | Standard | Beschreibung |
 |----------|----------|--------------|
-| `GITHUB_REPO` | `your-username/devicebox` | GitHub Repository |
+| `GITHUB_REPO` | `Musik-Wieland/DeviceBox` | GitHub Repository |
 | `APP_NAME` | `devicebox` | Anwendungsname |
 | `INSTALL_DIR` | `/opt/devicebox` | Installationsverzeichnis |
 | `DATA_DIR` | `/opt/devicebox/data` | Datenverzeichnis |

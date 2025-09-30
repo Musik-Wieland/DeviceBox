@@ -15,7 +15,7 @@ from pathlib import Path
 
 class DeviceBoxUpdater:
     def __init__(self):
-        self.github_repo = os.getenv('GITHUB_REPO', 'your-username/devicebox')
+        self.github_repo = os.getenv('GITHUB_REPO', 'Musik-Wieland/DeviceBox')
         self.app_name = os.getenv('APP_NAME', 'devicebox')
         self.install_dir = os.getenv('INSTALL_DIR', '/opt/devicebox')
         self.data_dir = os.getenv('DATA_DIR', '/opt/devicebox/data')

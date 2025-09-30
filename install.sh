@@ -29,7 +29,7 @@ warning() {
 }
 
 # Konfiguration aus Umgebungsvariablen oder Standardwerte
-GITHUB_REPO="${GITHUB_REPO:-your-username/devicebox}"
+GITHUB_REPO="${GITHUB_REPO:-Musik-Wieland/DeviceBox}"
 APP_NAME="${APP_NAME:-devicebox}"
 INSTALL_DIR="${INSTALL_DIR:-/opt/devicebox}"
 SERVICE_USER="${SERVICE_USER:-pi}"

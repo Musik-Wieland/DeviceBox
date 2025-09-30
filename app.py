@@ -21,7 +21,7 @@ app = Flask(__name__)
 class DeviceBoxApp:
     def __init__(self):
         self.version = "1.0.0"
-        self.github_repo = os.getenv('GITHUB_REPO', 'your-username/devicebox')
+        self.github_repo = os.getenv('GITHUB_REPO', 'Musik-Wieland/DeviceBox')
         self.app_name = os.getenv('APP_NAME', 'devicebox')
         self.update_in_progress = False
         
