@@ -34,6 +34,51 @@ chmod +x install.sh
 ./install.sh
 ```
 
+## Deinstallation
+
+### Vollständige Deinstallation
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Musik-Wieland/DeviceBox/main/uninstall.sh | bash
+```
+
+### Manuelle Deinstallation
+
+```bash
+chmod +x uninstall.sh
+./uninstall.sh
+```
+
+Das Deinstallationsskript entfernt:
+- ✅ DeviceBox Service (systemd)
+- ✅ Installationsverzeichnis (`/opt/devicebox`)
+- ✅ Nginx-Konfiguration
+- ✅ Firewall-Regeln
+- ✅ Python-Abhängigkeiten (optional)
+- ✅ System-Abhängigkeiten (optional)
+- ✅ Temporäre Dateien und Logs
+
+### Schnell-Deinstallation (für erfahrene Benutzer)
+
+```bash
+# Service stoppen und entfernen
+sudo systemctl stop devicebox
+sudo systemctl disable devicebox
+sudo rm -f /etc/systemd/system/devicebox.service
+sudo systemctl daemon-reload
+
+# Installationsverzeichnis entfernen
+sudo rm -rf /opt/devicebox
+
+# Nginx-Konfiguration entfernen
+sudo rm -f /etc/nginx/sites-available/devicebox
+sudo rm -f /etc/nginx/sites-enabled/devicebox
+sudo systemctl reload nginx
+
+# Firewall-Regel entfernen
+sudo ufw delete allow 8080
+```
+
 ### Konfiguration
 
 Vor der Installation können Umgebungsvariablen gesetzt werden:
