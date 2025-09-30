@@ -172,16 +172,77 @@
                 </div>
             </div>
 
+            <!-- USB Device Manager -->
+            <div class="device-manager-section">
+                <div class="device-manager-card">
+                    <div class="card-header">
+                        <div class="card-icon device-icon">
+                            <i class="fas fa-usb"></i>
+                        </div>
+                        <div class="card-title">
+                            <h3>USB Geräte-Manager</h3>
+                            <span class="card-subtitle">Verwaltung von Druckern, Scannern und EC-Kartengeräten</span>
+                        </div>
+                        <div class="card-actions">
+                            <button class="btn btn-primary" id="refresh-devices-btn">
+                                <i class="fas fa-sync-alt"></i>
+                                Geräte aktualisieren
+                            </button>
+                            <button class="btn btn-success" id="add-device-btn">
+                                <i class="fas fa-plus"></i>
+                                Gerät hinzufügen
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <!-- Gerätetyp-Auswahl Modal -->
+                        <div class="device-type-selection" id="device-type-selection" style="display: none;">
+                            <h4>Gerätetyp auswählen</h4>
+                            <div class="device-types-grid" id="device-types-grid">
+                                <!-- Wird dynamisch gefüllt -->
+                            </div>
+                        </div>
+                        
+                        <!-- Verfügbare Geräte -->
+                        <div class="available-devices" id="available-devices">
+                            <h4>Verfügbare USB-Geräte</h4>
+                            <div class="devices-list" id="devices-list">
+                                <div class="loading">
+                                    <div class="loading-spinner"></div>
+                                    <span>Suche nach USB-Geräten...</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Konfigurierte Geräte -->
+                        <div class="configured-devices" id="configured-devices">
+                            <h4>Konfigurierte Geräte</h4>
+                            <div class="devices-grid" id="devices-grid">
+                                <div class="loading">
+                                    <div class="loading-spinner"></div>
+                                    <span>Lade konfigurierte Geräte...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- System Information -->
             <div class="info-section">
                 <div class="info-card">
                     <div class="card-header">
-                        <i class="fas fa-info-circle"></i>
-                        <h3>System Information</h3>
+                        <div class="card-icon info-icon">
+                            <i class="fas fa-info-circle"></i>
+                        </div>
+                        <div class="card-title">
+                            <h3>System Information</h3>
+                            <span class="card-subtitle">Allgemeine Systemdaten</span>
+                        </div>
                     </div>
                     <div class="card-content" id="system-info">
                         <div class="loading">
-                            <i class="fas fa-spinner fa-spin"></i>
+                            <div class="loading-spinner"></div>
                             <span>Lade Systeminformationen...</span>
                         </div>
                     </div>

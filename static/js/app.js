@@ -12,6 +12,12 @@ class DeviceBoxApp {
         this.lastUpdateCheck = null;
         this.nextUpdateCheck = null;
         
+        // USB Device Manager
+        this.deviceTypes = {};
+        this.availableDevices = [];
+        this.configuredDevices = {};
+        this.selectedDeviceType = null;
+        
         this.init();
     }
     
@@ -47,6 +53,18 @@ class DeviceBoxApp {
             });
         }
         
+        // USB Device Manager Events
+        const refreshDevicesBtn = document.getElementById('refresh-devices-btn');
+        const addDeviceBtn = document.getElementById('add-device-btn');
+        
+        if (refreshDevicesBtn) {
+            refreshDevicesBtn.addEventListener('click', () => this.refreshDevices());
+        }
+        
+        if (addDeviceBtn) {
+            addDeviceBtn.addEventListener('click', () => this.showDeviceTypeSelection());
+        }
+        
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             if (e.ctrlKey && e.key === 'r') {
@@ -61,7 +79,10 @@ class DeviceBoxApp {
             await Promise.all([
                 this.loadSystemStatus(),
                 this.loadUpdateInfo(),
-                this.loadSystemInfo()
+                this.loadSystemInfo(),
+                this.loadDeviceTypes(),
+                this.loadAvailableDevices(),
+                this.loadConfiguredDevices()
             ]);
         } catch (error) {
             this.showToast('Fehler beim Laden der Daten', 'error');
@@ -605,6 +626,387 @@ class DeviceBoxApp {
                 toast.remove();
             }
         }, 5000);
+    }
+    
+    // USB Device Manager Functions
+    async loadDeviceTypes() {
+        try {
+            const response = await fetch('/api/devices/types');
+            const data = await response.json();
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            this.deviceTypes = data;
+        } catch (error) {
+            console.error('Error loading device types:', error);
+        }
+    }
+    
+    async loadAvailableDevices() {
+        try {
+            const response = await fetch('/api/devices/available');
+            const data = await response.json();
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            this.availableDevices = data;
+            this.updateAvailableDevicesList();
+        } catch (error) {
+            console.error('Error loading available devices:', error);
+            this.showAvailableDevicesError(error.message);
+        }
+    }
+    
+    async loadConfiguredDevices() {
+        try {
+            const response = await fetch('/api/devices');
+            const data = await response.json();
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            this.configuredDevices = data;
+            this.updateConfiguredDevicesGrid();
+        } catch (error) {
+            console.error('Error loading configured devices:', error);
+            this.showConfiguredDevicesError(error.message);
+        }
+    }
+    
+    updateAvailableDevicesList() {
+        const container = document.getElementById('devices-list');
+        if (!container) return;
+        
+        if (this.availableDevices.length === 0) {
+            container.innerHTML = `
+                <div class="no-devices">
+                    <i class="fas fa-usb"></i>
+                    <p>Keine USB-Geräte gefunden</p>
+                    <p class="text-secondary">Stecken Sie ein Gerät ein und klicken Sie auf "Geräte aktualisieren"</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = this.availableDevices.map(device => `
+            <div class="device-item">
+                <div class="device-info">
+                    <div class="device-name">${device.description || 'Unbekanntes Gerät'}</div>
+                    <div class="device-description">
+                        ${device.type === 'usb' ? 
+                            `USB: ${device.vendor_product}` : 
+                            `Seriell: ${device.port}`
+                        }
+                        ${device.manufacturer ? ` - ${device.manufacturer}` : ''}
+                    </div>
+                </div>
+                <div class="device-actions">
+                    <button class="btn btn-primary btn-sm" onclick="deviceBoxApp.addDeviceFromAvailable('${JSON.stringify(device).replace(/'/g, "\\'")}')">
+                        <i class="fas fa-plus"></i>
+                        Hinzufügen
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    updateConfiguredDevicesGrid() {
+        const container = document.getElementById('devices-grid');
+        if (!container) return;
+        
+        const devices = Object.values(this.configuredDevices);
+        
+        if (devices.length === 0) {
+            container.innerHTML = `
+                <div class="no-devices">
+                    <i class="fas fa-cog"></i>
+                    <p>Keine konfigurierten Geräte</p>
+                    <p class="text-secondary">Fügen Sie ein Gerät hinzu, um zu beginnen</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = devices.map(device => `
+            <div class="configured-device-card">
+                <div class="device-header">
+                    <div class="device-icon-small ${this.getDeviceTypeIcon(device.type)}">
+                        <i class="${this.getDeviceTypeIconClass(device.type)}"></i>
+                    </div>
+                    <div class="device-details">
+                        <h5>${device.name}</h5>
+                        <div class="device-model">${device.model}</div>
+                    </div>
+                </div>
+                
+                <div class="device-status">
+                    <span class="status-indicator-small ${device.status}"></span>
+                    <span>${this.getStatusText(device.status)}</span>
+                </div>
+                
+                <div class="device-actions-grid">
+                    <button class="btn btn-primary" onclick="deviceBoxApp.connectDevice('${device.id}')">
+                        <i class="fas fa-plug"></i>
+                        Verbinden
+                    </button>
+                    <button class="btn btn-secondary" onclick="deviceBoxApp.testDevice('${device.id}')">
+                        <i class="fas fa-play"></i>
+                        Testen
+                    </button>
+                    <button class="btn btn-secondary" onclick="deviceBoxApp.configureDevice('${device.id}')">
+                        <i class="fas fa-cog"></i>
+                        Einstellungen
+                    </button>
+                    <button class="btn btn-danger" onclick="deviceBoxApp.removeDevice('${device.id}')">
+                        <i class="fas fa-trash"></i>
+                        Entfernen
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    showDeviceTypeSelection() {
+        const container = document.getElementById('device-type-selection');
+        const grid = document.getElementById('device-types-grid');
+        
+        if (!container || !grid) return;
+        
+        container.style.display = 'block';
+        
+        grid.innerHTML = Object.entries(this.deviceTypes).map(([type, info]) => `
+            <div class="device-type-card" onclick="deviceBoxApp.selectDeviceType('${type}')">
+                <div class="device-type-icon ${this.getDeviceTypeIcon(type)}">
+                    <i class="${this.getDeviceTypeIconClass(type)}"></i>
+                </div>
+                <div class="device-type-name">${info.name}</div>
+                <div class="device-type-models">
+                    ${info.models.length > 0 ? info.models.join(', ') : 'Keine Modelle verfügbar'}
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    selectDeviceType(type) {
+        this.selectedDeviceType = type;
+        
+        // Markiere ausgewählten Typ
+        document.querySelectorAll('.device-type-card').forEach(card => {
+            card.classList.remove('selected');
+        });
+        event.target.closest('.device-type-card').classList.add('selected');
+        
+        // Zeige verfügbare Geräte für diesen Typ
+        this.filterAvailableDevicesByType(type);
+    }
+    
+    filterAvailableDevicesByType(type) {
+        // Hier würde die Filterung nach Gerätetyp stattfinden
+        // Für jetzt zeigen wir alle Geräte
+        this.updateAvailableDevicesList();
+    }
+    
+    async addDeviceFromAvailable(deviceInfoStr) {
+        try {
+            const deviceInfo = JSON.parse(deviceInfoStr);
+            
+            if (!this.selectedDeviceType) {
+                this.showToast('Bitte wählen Sie zuerst einen Gerätetyp aus', 'warning');
+                return;
+            }
+            
+            const deviceType = this.deviceTypes[this.selectedDeviceType];
+            const model = deviceType.models[0] || 'Unbekanntes Modell';
+            
+            const response = await fetch('/api/devices', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    device_type: this.selectedDeviceType,
+                    model: model,
+                    device_info: deviceInfo,
+                    custom_name: ''
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            this.showToast('Gerät erfolgreich hinzugefügt', 'success');
+            await this.loadConfiguredDevices();
+            
+            // Verstecke Gerätetyp-Auswahl
+            document.getElementById('device-type-selection').style.display = 'none';
+            this.selectedDeviceType = null;
+            
+        } catch (error) {
+            this.showToast(`Fehler beim Hinzufügen: ${error.message}`, 'error');
+        }
+    }
+    
+    async connectDevice(deviceId) {
+        try {
+            const response = await fetch(`/api/devices/${deviceId}/connect`, {
+                method: 'POST'
+            });
+            
+            const data = await response.json();
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            this.showToast('Gerät erfolgreich verbunden', 'success');
+            await this.loadConfiguredDevices();
+            
+        } catch (error) {
+            this.showToast(`Fehler beim Verbinden: ${error.message}`, 'error');
+        }
+    }
+    
+    async testDevice(deviceId) {
+        try {
+            const device = this.configuredDevices[deviceId];
+            if (!device) {
+                throw new Error('Gerät nicht gefunden');
+            }
+            
+            const testType = this.getTestTypeForDevice(device.type);
+            
+            const response = await fetch(`/api/devices/${deviceId}/test`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    test_type: testType
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            this.showToast(data.message, data.success ? 'success' : 'error');
+            
+        } catch (error) {
+            this.showToast(`Fehler beim Testen: ${error.message}`, 'error');
+        }
+    }
+    
+    async removeDevice(deviceId) {
+        if (!confirm('Möchten Sie dieses Gerät wirklich entfernen?')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/devices/${deviceId}`, {
+                method: 'DELETE'
+            });
+            
+            const data = await response.json();
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            this.showToast('Gerät erfolgreich entfernt', 'success');
+            await this.loadConfiguredDevices();
+            
+        } catch (error) {
+            this.showToast(`Fehler beim Entfernen: ${error.message}`, 'error');
+        }
+    }
+    
+    async refreshDevices() {
+        this.showToast('Geräte werden aktualisiert...', 'info');
+        await Promise.all([
+            this.loadAvailableDevices(),
+            this.loadConfiguredDevices()
+        ]);
+        this.showToast('Geräte aktualisiert', 'success');
+    }
+    
+    // Helper Functions
+    getDeviceTypeIcon(type) {
+        const icons = {
+            'printer': 'printer-icon',
+            'label_printer': 'label-icon',
+            'shipping_printer': 'shipping-icon',
+            'barcode_scanner': 'scanner-icon',
+            'receipt_printer': 'receipt-icon',
+            'card_reader': 'card-icon'
+        };
+        return icons[type] || 'default-icon';
+    }
+    
+    getDeviceTypeIconClass(type) {
+        const icons = {
+            'printer': 'fas fa-print',
+            'label_printer': 'fas fa-tag',
+            'shipping_printer': 'fas fa-shipping-fast',
+            'barcode_scanner': 'fas fa-barcode',
+            'receipt_printer': 'fas fa-receipt',
+            'card_reader': 'fas fa-credit-card'
+        };
+        return icons[type] || 'fas fa-usb';
+    }
+    
+    getTestTypeForDevice(type) {
+        const testTypes = {
+            'printer': 'test_print',
+            'label_printer': 'test_print',
+            'shipping_printer': 'test_print',
+            'barcode_scanner': 'test_scan',
+            'receipt_printer': 'test_print',
+            'card_reader': 'test_transaction'
+        };
+        return testTypes[type] || 'test_print';
+    }
+    
+    getStatusText(status) {
+        const statusTexts = {
+            'connected': 'Verbunden',
+            'disconnected': 'Getrennt',
+            'error': 'Fehler'
+        };
+        return statusTexts[status] || 'Unbekannt';
+    }
+    
+    showAvailableDevicesError(message) {
+        const container = document.getElementById('devices-list');
+        if (!container) return;
+        
+        container.innerHTML = `
+            <div class="error-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>Fehler beim Laden: ${message}</span>
+            </div>
+        `;
+    }
+    
+    showConfiguredDevicesError(message) {
+        const container = document.getElementById('devices-grid');
+        if (!container) return;
+        
+        container.innerHTML = `
+            <div class="error-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>Fehler beim Laden: ${message}</span>
+            </div>
+        `;
     }
 }
 

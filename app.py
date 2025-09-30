@@ -15,6 +15,7 @@ from datetime import datetime
 from flask import Flask, render_template, jsonify, request
 from threading import Thread
 import time
+from device_manager import device_manager
 
 app = Flask(__name__)
 
@@ -148,6 +149,117 @@ def api_update():
 def api_version():
     """API-Endpoint für Version"""
     return jsonify({'version': devicebox.version})
+
+# USB Device Manager API Endpoints
+@app.route('/api/devices')
+def api_get_devices():
+    """API-Endpoint für alle USB-Geräte"""
+    return jsonify(device_manager.get_all_devices())
+
+@app.route('/api/devices/types')
+def api_get_device_types():
+    """API-Endpoint für verfügbare Gerätetypen"""
+    return jsonify(device_manager.device_types)
+
+@app.route('/api/devices/available')
+def api_get_available_devices():
+    """API-Endpoint für verfügbare USB-Geräte"""
+    return jsonify(device_manager.get_available_usb_devices())
+
+@app.route('/api/devices', methods=['POST'])
+def api_add_device():
+    """API-Endpoint zum Hinzufügen eines Geräts"""
+    data = request.get_json()
+    
+    required_fields = ['device_type', 'model', 'device_info']
+    for field in required_fields:
+        if field not in data:
+            return jsonify({'error': f'Fehlendes Feld: {field}'}), 400
+    
+    try:
+        device = device_manager.add_device(
+            device_type=data['device_type'],
+            model=data['model'],
+            device_info=data['device_info'],
+            custom_name=data.get('custom_name', '')
+        )
+        return jsonify(device)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/devices/<device_id>', methods=['DELETE'])
+def api_remove_device(device_id):
+    """API-Endpoint zum Entfernen eines Geräts"""
+    try:
+        success = device_manager.remove_device(device_id)
+        if success:
+            return jsonify({'success': True})
+        else:
+            return jsonify({'error': 'Gerät nicht gefunden'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/devices/<device_id>/connect', methods=['POST'])
+def api_connect_device(device_id):
+    """API-Endpoint zum Verbinden eines Geräts"""
+    try:
+        success = device_manager.connect_device(device_id)
+        if success:
+            return jsonify({'success': True})
+        else:
+            return jsonify({'error': 'Gerät nicht gefunden'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/devices/<device_id>/disconnect', methods=['POST'])
+def api_disconnect_device(device_id):
+    """API-Endpoint zum Trennen eines Geräts"""
+    try:
+        success = device_manager.disconnect_device(device_id)
+        if success:
+            return jsonify({'success': True})
+        else:
+            return jsonify({'error': 'Gerät nicht gefunden'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/devices/<device_id>/test', methods=['POST'])
+def api_test_device(device_id):
+    """API-Endpoint zum Testen eines Geräts"""
+    data = request.get_json()
+    test_type = data.get('test_type', 'test_print')
+    
+    try:
+        result = device_manager.test_device(device_id, test_type)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/devices/<device_id>/settings', methods=['PUT'])
+def api_update_device_settings(device_id):
+    """API-Endpoint zum Aktualisieren der Geräteeinstellungen"""
+    data = request.get_json()
+    
+    try:
+        success = device_manager.update_device_settings(device_id, data)
+        if success:
+            return jsonify({'success': True})
+        else:
+            return jsonify({'error': 'Gerät nicht gefunden'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/devices/<device_id>/status')
+def api_get_device_status(device_id):
+    """API-Endpoint für Gerätestatus"""
+    try:
+        status = device_manager.get_device_status(device_id)
+        if status:
+            return jsonify(status)
+        else:
+            return jsonify({'error': 'Gerät nicht gefunden'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     # Konfiguration aus Umgebungsvariablen
