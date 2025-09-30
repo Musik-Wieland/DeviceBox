@@ -77,47 +77,45 @@ class DeviceBoxApp:
             return None
     
     def check_for_updates(self):
-        """Prüft auf verfügbare Updates auf GitHub"""
+        """Prüft auf verfügbare Updates mit Auto-Update-System"""
         try:
-            url = f"https://api.github.com/repos/{self.github_repo}/releases/latest"
-            response = requests.get(url, timeout=10)
+            # Verwende das neue Auto-Update-System
+            import subprocess
+            result = subprocess.run([
+                sys.executable, 
+                os.path.join(os.path.dirname(__file__), 'auto_update.py'), 
+                'check'
+            ], capture_output=True, text=True, timeout=30)
             
-            if response.status_code == 200:
-                latest_release = response.json()
-                latest_version = latest_release['tag_name'].lstrip('v')
-                
-                return {
-                    'available': latest_version != self.version,
-                    'latest_version': latest_version,
-                    'current_version': self.version,
-                    'release_notes': latest_release.get('body', ''),
-                    'download_url': latest_release['assets'][0]['browser_download_url'] if latest_release['assets'] else None
-                }
+            if result.returncode == 0:
+                import json
+                update_info = json.loads(result.stdout)
+                return update_info
             else:
-                return {'error': f'GitHub API Fehler: {response.status_code}'}
+                return {'error': f'Auto-Update-Check fehlgeschlagen: {result.stderr}'}
         except Exception as e:
             return {'error': str(e)}
     
     def perform_update(self):
-        """Führt das Update durch"""
+        """Führt das Update mit Auto-Update-System durch"""
         if self.update_in_progress:
             return {'error': 'Update bereits in Bearbeitung'}
         
         self.update_in_progress = True
         
         try:
-            # Update-Skript ausführen
-            update_script = os.path.join(os.path.dirname(__file__), 'update.py')
-            if os.path.exists(update_script):
-                result = subprocess.run([sys.executable, update_script], 
+            # Auto-Update-Skript ausführen
+            auto_update_script = os.path.join(os.path.dirname(__file__), 'auto_update.py')
+            if os.path.exists(auto_update_script):
+                result = subprocess.run([sys.executable, auto_update_script], 
                                       capture_output=True, text=True, timeout=300)
                 
                 if result.returncode == 0:
-                    return {'success': True, 'message': 'Update erfolgreich abgeschlossen'}
+                    return {'success': True, 'message': 'Auto-Update erfolgreich abgeschlossen'}
                 else:
-                    return {'error': f'Update fehlgeschlagen: {result.stderr}'}
+                    return {'error': f'Auto-Update fehlgeschlagen: {result.stderr}'}
             else:
-                return {'error': 'Update-Skript nicht gefunden'}
+                return {'error': 'Auto-Update-Skript nicht gefunden'}
         except Exception as e:
             return {'error': str(e)}
         finally:

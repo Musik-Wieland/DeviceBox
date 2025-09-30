@@ -163,6 +163,7 @@ download_app() {
     sudo chown -R "$SERVICE_USER:$SERVICE_USER" "$INSTALL_DIR"
     sudo chmod +x "$INSTALL_DIR/app.py"
     sudo chmod +x "$INSTALL_DIR/update.py"
+    sudo chmod +x "$INSTALL_DIR/auto_update.py"
     
     # Aufräumen
     cd /

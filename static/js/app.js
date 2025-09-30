@@ -8,6 +8,9 @@ class DeviceBoxApp {
         this.refreshInterval = null;
         this.updateCheckInterval = null;
         this.isUpdating = false;
+        this.autoUpdateEnabled = true;
+        this.lastUpdateCheck = null;
+        this.nextUpdateCheck = null;
         
         this.init();
     }
@@ -23,6 +26,7 @@ class DeviceBoxApp {
         const checkUpdatesBtn = document.getElementById('check-updates-btn');
         const updateBtn = document.getElementById('update-btn');
         const refreshBtn = document.getElementById('refresh-btn');
+        const autoUpdateToggle = document.getElementById('auto-update-toggle');
         
         if (checkUpdatesBtn) {
             checkUpdatesBtn.addEventListener('click', () => this.checkForUpdates());
@@ -34,6 +38,13 @@ class DeviceBoxApp {
         
         if (refreshBtn) {
             refreshBtn.addEventListener('click', () => this.refreshAll());
+        }
+        
+        if (autoUpdateToggle) {
+            autoUpdateToggle.addEventListener('change', (e) => {
+                this.autoUpdateEnabled = e.target.checked;
+                this.updateAutoUpdateStatus();
+            });
         }
         
         // Keyboard shortcuts
@@ -292,22 +303,37 @@ class DeviceBoxApp {
         `;
     }
     
-    async checkForUpdates() {
+    async checkForUpdates(silent = false) {
         const btn = document.getElementById('check-updates-btn');
-        if (btn) {
+        if (btn && !silent) {
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Prüfe...';
         }
         
         try {
             await this.loadUpdateInfo();
-            this.showToast('Update-Check abgeschlossen', 'success');
+            
+            // Update last check time
+            this.lastUpdateCheck = new Date();
+            const lastCheckElement = document.getElementById('last-check');
+            if (lastCheckElement) {
+                lastCheckElement.textContent = this.formatTimestamp(this.lastUpdateCheck);
+            }
+            
+            // Update next check time
+            this.updateNextCheckTime();
+            
+            if (!silent) {
+                this.showToast('Update-Check abgeschlossen', 'success');
+            }
         } catch (error) {
-            this.showToast('Update-Check fehlgeschlagen', 'error');
+            if (!silent) {
+                this.showToast('Update-Check fehlgeschlagen', 'error');
+            }
         } finally {
-            if (btn) {
+            if (btn && !silent) {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-search"></i> Auf Updates prüfen';
+                btn.innerHTML = '<i class="fas fa-search"></i> Jetzt prüfen';
             }
         }
     }
@@ -423,10 +449,37 @@ class DeviceBoxApp {
             this.loadSystemStatus();
         }, 30000);
         
-        // Check for updates every 5 minutes
+        // Check for updates every 5 minutes if auto-update is enabled
         this.updateCheckInterval = setInterval(() => {
-            this.loadUpdateInfo();
+            if (this.autoUpdateEnabled) {
+                this.checkForUpdates(true); // Silent check
+            }
         }, 300000);
+        
+        // Update the next check time display
+        this.updateNextCheckTime();
+    }
+    
+    updateNextCheckTime() {
+        const nextCheckElement = document.getElementById('next-check');
+        if (nextCheckElement) {
+            const now = new Date();
+            const nextCheck = new Date(now.getTime() + 5 * 60 * 1000); // 5 minutes from now
+            nextCheckElement.textContent = this.formatTimeUntil(nextCheck);
+        }
+    }
+    
+    updateAutoUpdateStatus() {
+        if (this.autoUpdateEnabled) {
+            this.startAutoRefresh();
+            this.showToast('Automatische Updates aktiviert', 'success');
+        } else {
+            if (this.updateCheckInterval) {
+                clearInterval(this.updateCheckInterval);
+                this.updateCheckInterval = null;
+            }
+            this.showToast('Automatische Updates deaktiviert', 'info');
+        }
     }
     
     stopAutoRefresh() {
@@ -463,6 +516,27 @@ class DeviceBoxApp {
     
     formatTimestamp(timestamp) {
         return new Date(timestamp).toLocaleString('de-DE');
+    }
+    
+    formatTimeUntil(targetDate) {
+        const now = new Date();
+        const diff = targetDate.getTime() - now.getTime();
+        
+        if (diff <= 0) {
+            return 'Jetzt';
+        }
+        
+        const minutes = Math.floor(diff / (1000 * 60));
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
+        
+        if (days > 0) {
+            return `In ${days}d ${hours % 24}h`;
+        } else if (hours > 0) {
+            return `In ${hours}h ${minutes % 60}m`;
+        } else {
+            return `In ${minutes}m`;
+        }
     }
     
     getCpuStatusClass(percent) {

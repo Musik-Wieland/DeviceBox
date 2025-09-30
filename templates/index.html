@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <meta name="theme-color" content="#007AFF">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📱</text></svg>">
 </head>
 <body>
     <div class="container">
@@ -14,11 +15,22 @@
         <header class="header">
             <div class="header-content">
                 <div class="logo">
-                    <i class="fas fa-microchip"></i>
-                    <h1>DeviceBox</h1>
+                    <div class="logo-icon">
+                        <i class="fas fa-microchip"></i>
+                    </div>
+                    <div class="logo-text">
+                        <h1>DeviceBox</h1>
+                        <span class="subtitle">Raspberry Pi Management</span>
+                    </div>
                 </div>
-                <div class="version-info">
-                    <span class="version-badge">v{{ version }}</span>
+                <div class="header-actions">
+                    <div class="version-info">
+                        <span class="version-badge">v{{ version }}</span>
+                    </div>
+                    <div class="status-indicator" id="connection-status">
+                        <i class="fas fa-circle"></i>
+                        <span>Verbunden</span>
+                    </div>
                 </div>
             </div>
         </header>
@@ -28,56 +40,76 @@
             <!-- Status Cards -->
             <div class="status-grid">
                 <!-- System Status -->
-                <div class="status-card">
+                <div class="status-card system-card">
                     <div class="card-header">
-                        <i class="fas fa-server"></i>
-                        <h3>System Status</h3>
+                        <div class="card-icon system-icon">
+                            <i class="fas fa-server"></i>
+                        </div>
+                        <div class="card-title">
+                            <h3>System Status</h3>
+                            <span class="card-subtitle">Allgemeine Informationen</span>
+                        </div>
                     </div>
                     <div class="card-content" id="system-status">
                         <div class="loading">
-                            <i class="fas fa-spinner fa-spin"></i>
+                            <div class="loading-spinner"></div>
                             <span>Lade Systemdaten...</span>
                         </div>
                     </div>
                 </div>
 
                 <!-- CPU Status -->
-                <div class="status-card">
+                <div class="status-card cpu-card">
                     <div class="card-header">
-                        <i class="fas fa-microchip"></i>
-                        <h3>CPU</h3>
+                        <div class="card-icon cpu-icon">
+                            <i class="fas fa-microchip"></i>
+                        </div>
+                        <div class="card-title">
+                            <h3>CPU</h3>
+                            <span class="card-subtitle">Prozessor-Auslastung</span>
+                        </div>
                     </div>
                     <div class="card-content" id="cpu-status">
                         <div class="loading">
-                            <i class="fas fa-spinner fa-spin"></i>
+                            <div class="loading-spinner"></div>
                             <span>Lade CPU-Daten...</span>
                         </div>
                     </div>
                 </div>
 
                 <!-- Memory Status -->
-                <div class="status-card">
+                <div class="status-card memory-card">
                     <div class="card-header">
-                        <i class="fas fa-memory"></i>
-                        <h3>Arbeitsspeicher</h3>
+                        <div class="card-icon memory-icon">
+                            <i class="fas fa-memory"></i>
+                        </div>
+                        <div class="card-title">
+                            <h3>Arbeitsspeicher</h3>
+                            <span class="card-subtitle">RAM-Verbrauch</span>
+                        </div>
                     </div>
                     <div class="card-content" id="memory-status">
                         <div class="loading">
-                            <i class="fas fa-spinner fa-spin"></i>
+                            <div class="loading-spinner"></div>
                             <span>Lade Speicher-Daten...</span>
                         </div>
                     </div>
                 </div>
 
                 <!-- Storage Status -->
-                <div class="status-card">
+                <div class="status-card storage-card">
                     <div class="card-header">
-                        <i class="fas fa-hdd"></i>
-                        <h3>Speicher</h3>
+                        <div class="card-icon storage-icon">
+                            <i class="fas fa-hdd"></i>
+                        </div>
+                        <div class="card-title">
+                            <h3>Speicher</h3>
+                            <span class="card-subtitle">Festplatten-Speicher</span>
+                        </div>
                     </div>
                     <div class="card-content" id="storage-status">
                         <div class="loading">
-                            <i class="fas fa-spinner fa-spin"></i>
+                            <div class="loading-spinner"></div>
                             <span>Lade Speicher-Daten...</span>
                         </div>
                     </div>
@@ -88,20 +120,32 @@
             <div class="update-section">
                 <div class="update-card">
                     <div class="card-header">
-                        <i class="fas fa-sync-alt"></i>
-                        <h3>System Updates</h3>
+                        <div class="card-icon update-icon">
+                            <i class="fas fa-sync-alt"></i>
+                        </div>
+                        <div class="card-title">
+                            <h3>System Updates</h3>
+                            <span class="card-subtitle">Automatische Updates</span>
+                        </div>
+                        <div class="card-toggle">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="auto-update-toggle" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-label">Auto-Update</span>
+                        </div>
                     </div>
                     <div class="card-content">
                         <div class="update-info" id="update-info">
                             <div class="loading">
-                                <i class="fas fa-spinner fa-spin"></i>
+                                <div class="loading-spinner"></div>
                                 <span>Prüfe auf Updates...</span>
                             </div>
                         </div>
                         <div class="update-actions" id="update-actions" style="display: none;">
                             <button class="btn btn-primary" id="check-updates-btn">
                                 <i class="fas fa-search"></i>
-                                Auf Updates prüfen
+                                Jetzt prüfen
                             </button>
                             <button class="btn btn-success" id="update-btn" style="display: none;">
                                 <i class="fas fa-download"></i>
@@ -113,6 +157,16 @@
                                 <div class="progress-fill"></div>
                             </div>
                             <span class="progress-text">Update wird installiert...</span>
+                        </div>
+                        <div class="update-settings">
+                            <div class="setting-item">
+                                <span class="setting-label">Letzte Prüfung:</span>
+                                <span class="setting-value" id="last-check">Nie</span>
+                            </div>
+                            <div class="setting-item">
+                                <span class="setting-label">Nächste Prüfung:</span>
+                                <span class="setting-value" id="next-check">In 5 Minuten</span>
+                            </div>
                         </div>
                     </div>
                 </div>

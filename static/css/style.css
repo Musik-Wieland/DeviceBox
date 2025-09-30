@@ -92,15 +92,39 @@ body {
     gap: var(--spacing-md);
 }
 
-.logo i {
-    font-size: 2rem;
-    color: var(--primary-blue);
+.logo-icon {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
 }
 
-.logo h1 {
+.logo-icon i {
+    font-size: 1.5rem;
+    color: white;
+}
+
+.logo-text h1 {
     font-size: 1.8rem;
     font-weight: 700;
     color: var(--text-primary);
+    margin: 0;
+}
+
+.logo-text .subtitle {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-lg);
 }
 
 .version-badge {
@@ -110,6 +134,19 @@ body {
     border-radius: var(--radius-sm);
     font-size: 0.875rem;
     font-weight: 600;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.status-indicator i {
+    color: var(--accent-green);
+    font-size: 0.75rem;
 }
 
 /* Main Content */
@@ -156,15 +193,106 @@ body {
     background: rgba(255, 255, 255, 0.1);
 }
 
-.card-header i {
+.card-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-size: 1.25rem;
-    color: var(--primary-blue);
+    color: white;
 }
 
-.card-header h3 {
+.system-icon {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+.cpu-icon {
+    background: linear-gradient(135deg, #f093fb, #f5576c);
+}
+
+.memory-icon {
+    background: linear-gradient(135deg, #4facfe, #00f2fe);
+}
+
+.storage-icon {
+    background: linear-gradient(135deg, #43e97b, #38f9d7);
+}
+
+.update-icon {
+    background: linear-gradient(135deg, #fa709a, #fee140);
+}
+
+.card-title h3 {
     font-size: 1.125rem;
     font-weight: 600;
     color: var(--text-primary);
+    margin: 0;
+}
+
+.card-subtitle {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    font-weight: 500;
+}
+
+.card-toggle {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 24px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+    background-color: var(--primary-blue);
+}
+
+input:checked + .toggle-slider:before {
+    transform: translateX(20px);
+}
+
+.toggle-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 500;
 }
 
 .card-content {
@@ -179,6 +307,20 @@ body {
     gap: var(--spacing-md);
     padding: var(--spacing-xl);
     color: var(--text-secondary);
+}
+
+.loading-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(0, 122, 255, 0.2);
+    border-top: 2px solid var(--primary-blue);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
 .loading i {
@@ -314,10 +456,43 @@ body {
     display: flex;
     gap: var(--spacing-md);
     flex-wrap: wrap;
+    margin-bottom: var(--spacing-lg);
 }
 
 .update-progress {
     text-align: center;
+    margin-bottom: var(--spacing-lg);
+}
+
+.update-settings {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.setting-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-sm) 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.setting-item:last-child {
+    border-bottom: none;
+}
+
+.setting-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.setting-value {
+    font-size: 0.875rem;
+    color: var(--text-primary);
+    font-weight: 600;
 }
 
 /* Info Section */
