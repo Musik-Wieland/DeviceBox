@@ -156,7 +156,7 @@ EOF
 setup_service() {
     log "Richte Systemd-Service ein..."
     
-    # Create service file with current user
+            # Create service file with current user - KORREKTE KONFIGURATION
     cat > /tmp/devicebox.service << EOF
 [Unit]
 Description=DeviceBox - Raspberry Pi Web Interface
@@ -169,7 +169,8 @@ User=$USER
 Group=$USER
 WorkingDirectory=/home/$USER/devicebox
 Environment=PATH=/home/$USER/devicebox/venv/bin
-ExecStart=/home/$USER/devicebox/venv/bin/python /home/$USER/devicebox/app.py
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/$USER/devicebox/venv/bin/python -u /home/$USER/devicebox/app.py
 Restart=always
 RestartSec=10
 StandardOutput=journal
@@ -192,64 +193,13 @@ EOF
     sudo systemctl start devicebox
     
     # Check status
-    sleep 5
+    sleep 3
     if sudo systemctl is-active --quiet devicebox; then
         log "DeviceBox Service läuft erfolgreich"
     else
         error "DeviceBox Service konnte nicht gestartet werden"
-        log "Versuche manuellen Start..."
-        
-        # Try manual start to see error
-        cd /home/$USER/devicebox
-        source venv/bin/activate
-        python app.py &
-        MANUAL_PID=$!
-        sleep 3
-        
-        if kill -0 $MANUAL_PID 2>/dev/null; then
-            log "Manueller Start erfolgreich - Service-Problem erkannt"
-            kill $MANUAL_PID
-            log "Service wird mit korrigierter Konfiguration neu gestartet..."
-            
-            # Fix service file
-            sudo tee /etc/systemd/system/devicebox.service > /dev/null << EOF
-[Unit]
-Description=DeviceBox - Raspberry Pi Web Interface
-After=network.target
-Wants=network.target
-
-[Service]
-Type=simple
-User=$USER
-Group=$USER
-WorkingDirectory=/home/$USER/devicebox
-Environment=PATH=/home/$USER/devicebox/venv/bin
-ExecStart=/home/$USER/devicebox/venv/bin/python /home/$USER/devicebox/app.py
-Restart=always
-RestartSec=10
-StandardOutput=journal
-StandardError=journal
-
-[Install]
-WantedBy=multi-user.target
-EOF
-            
-            sudo systemctl daemon-reload
-            sudo systemctl start devicebox
-            sleep 3
-            
-            if sudo systemctl is-active --quiet devicebox; then
-                log "DeviceBox Service läuft jetzt erfolgreich"
-            else
-                error "Service-Problem konnte nicht gelöst werden"
-                sudo systemctl status devicebox
-                exit 1
-            fi
-        else
-            error "Auch manueller Start fehlgeschlagen"
-            sudo systemctl status devicebox
-            exit 1
-        fi
+        sudo systemctl status devicebox
+        exit 1
     fi
 }
 
