@@ -99,13 +99,17 @@ class USBDeviceManager:
                             # Extrahiere Hersteller aus der Beschreibung
                             manufacturer = self.extract_manufacturer(description)
                             
+                            # Erkenne Gerätetyp
+                            device_type = self.detect_device_type(description, vendor_product)
+                            
                             devices.append({
                                 'bus': bus,
                                 'device_id': device_id,
                                 'vendor_product': vendor_product,
                                 'description': description,
                                 'manufacturer': manufacturer,
-                                'type': 'usb'
+                                'type': 'usb',
+                                'device_type': device_type
                             })
         except Exception as e:
             print(f"Fehler beim Ermitteln der USB-Geräte: {e}")
@@ -137,10 +141,21 @@ class USBDeviceManager:
             'keyboard', 'mouse', 'audio', 'mass storage', 'usb hub'
         ]
         
+        # Spezielle System-Vendor-IDs
+        system_vendors = [
+            '1d6b:0002',  # Linux Foundation 2.0 root hub
+            '1d6b:0003',  # Linux Foundation 3.0 root hub
+        ]
+        
         description_lower = description.lower()
         for keyword in system_keywords:
             if keyword in description_lower:
                 return True
+        
+        # Prüfe Vendor-IDs
+        if vendor_product in system_vendors:
+            return True
+            
         return False
     
     def is_system_serial_port(self, port: str) -> bool:
@@ -163,6 +178,40 @@ class USBDeviceManager:
         ]
         
         return port in system_ports
+    
+    def detect_device_type(self, description: str, vendor_product: str) -> str:
+        """Erkennt den Gerätetyp basierend auf Beschreibung und Vendor/Product ID"""
+        description_lower = description.lower()
+        
+        # Barcode Scanner
+        if 'barcode' in description_lower or 'scanner' in description_lower:
+            return 'barcode_scanner'
+        
+        # Drucker
+        if 'printer' in description_lower or 'print' in description_lower:
+            if 'label' in description_lower:
+                return 'label_printer'
+            elif 'receipt' in description_lower or 'bond' in description_lower:
+                return 'receipt_printer'
+            else:
+                return 'printer'
+        
+        # EC-Kartengerät
+        if 'card' in description_lower or 'payment' in description_lower:
+            return 'card_reader'
+        
+        # Bekannte Vendor-IDs
+        known_devices = {
+            '05f9:2214': 'barcode_scanner',  # PSC Scanning Barcode Scanner
+            '04b8:0202': 'receipt_printer',  # Epson Receipt Printer
+            '04b8:0203': 'receipt_printer',  # Epson Receipt Printer
+            '04f9:2040': 'printer',          # Brother Printer
+        }
+        
+        if vendor_product in known_devices:
+            return known_devices[vendor_product]
+        
+        return 'unknown'
     
     def extract_manufacturer(self, description: str) -> str:
         """Extrahiert den Hersteller aus der Gerätebeschreibung"""
