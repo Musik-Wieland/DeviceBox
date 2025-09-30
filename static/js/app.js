@@ -49,6 +49,33 @@ class DeviceBoxApp {
             cancelConfig.addEventListener('click', () => this.closeConfigModal());
         }
         
+        // Device Test Modal Events
+        const closeTestModal = document.getElementById('close-test-modal');
+        const closeTestModalBtn = document.getElementById('close-test-modal-btn');
+        const testPrintBtn = document.getElementById('test-print-btn');
+        const testScanBtn = document.getElementById('test-scan-btn');
+        const testTransactionBtn = document.getElementById('test-transaction-btn');
+        
+        if (closeTestModal) {
+            closeTestModal.addEventListener('click', () => this.closeTestModal());
+        }
+        
+        if (closeTestModalBtn) {
+            closeTestModalBtn.addEventListener('click', () => this.closeTestModal());
+        }
+        
+        if (testPrintBtn) {
+            testPrintBtn.addEventListener('click', () => this.testDevice('test_print'));
+        }
+        
+        if (testScanBtn) {
+            testScanBtn.addEventListener('click', () => this.testDevice('test_scan'));
+        }
+        
+        if (testTransactionBtn) {
+            testTransactionBtn.addEventListener('click', () => this.testDevice('test_transaction'));
+        }
+        
         if (saveConfig) {
             saveConfig.addEventListener('click', () => this.saveDeviceConfig());
         }
@@ -359,7 +386,7 @@ class DeviceBoxApp {
                         <i class="fas fa-plug"></i>
                         Verbinden
                     </button>
-                    <button class="btn btn-secondary btn-sm" onclick="deviceBoxApp.testDevice('${device.id}')">
+                    <button class="btn btn-secondary btn-sm" onclick="deviceBoxApp.openTestModal(${JSON.stringify(device).replace(/"/g, '&quot;')})">
                         <i class="fas fa-play"></i>
                         Testen
                     </button>
@@ -425,6 +452,131 @@ class DeviceBoxApp {
             modal.classList.remove('show');
             this.currentDevice = null;
         }
+    }
+    
+    openTestModal(device) {
+        this.currentDevice = device;
+        const modal = document.getElementById('device-test-modal');
+        const deviceName = document.getElementById('test-device-name');
+        const deviceType = document.getElementById('test-device-type');
+        const testPrintBtn = document.getElementById('test-print-btn');
+        const testScanBtn = document.getElementById('test-scan-btn');
+        const testTransactionBtn = document.getElementById('test-transaction-btn');
+        const testResults = document.getElementById('test-results');
+        
+        if (modal && deviceName && deviceType) {
+            deviceName.textContent = device.name || 'Unbekanntes Gerät';
+            deviceType.textContent = this.getDeviceTypeName(device.type);
+            
+            // Zeige relevante Test-Buttons basierend auf Gerätetyp
+            testPrintBtn.style.display = 'none';
+            testScanBtn.style.display = 'none';
+            testTransactionBtn.style.display = 'none';
+            
+            if (device.type === 'printer' || device.type === 'label_printer' || 
+                device.type === 'shipping_printer' || device.type === 'receipt_printer') {
+                testPrintBtn.style.display = 'inline-block';
+            }
+            
+            if (device.type === 'barcode_scanner') {
+                testScanBtn.style.display = 'inline-block';
+            }
+            
+            if (device.type === 'card_reader') {
+                testTransactionBtn.style.display = 'inline-block';
+            }
+            
+            // Verstecke vorherige Ergebnisse
+            testResults.style.display = 'none';
+            
+            modal.classList.add('show');
+        }
+    }
+    
+    closeTestModal() {
+        const modal = document.getElementById('device-test-modal');
+        if (modal) {
+            modal.classList.remove('show');
+            this.currentDevice = null;
+        }
+    }
+    
+    async testDevice(testType) {
+        if (!this.currentDevice) {
+            this.showToast('Kein Gerät ausgewählt', 'error');
+            return;
+        }
+        
+        const testResults = document.getElementById('test-results');
+        const resultContent = document.getElementById('result-content');
+        
+        if (testResults && resultContent) {
+            // Zeige Lade-Status
+            resultContent.innerHTML = `
+                <div class="loading-state">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>Teste Gerät...</span>
+                </div>
+            `;
+            testResults.style.display = 'block';
+            
+            try {
+                const response = await fetch(`/api/devices/${this.currentDevice.id}/test`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ test_type: testType })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    resultContent.innerHTML = `
+                        <div class="test-success">
+                            <i class="fas fa-check-circle"></i>
+                            <h5>Test erfolgreich!</h5>
+                            <p>${result.message}</p>
+                            ${result.scan_result ? `<p><strong>Scan-Ergebnis:</strong> ${result.scan_result}</p>` : ''}
+                            ${result.transaction_id ? `<p><strong>Transaktions-ID:</strong> ${result.transaction_id}</p>` : ''}
+                            ${result.amount ? `<p><strong>Betrag:</strong> ${result.amount} ${result.currency || 'EUR'}</p>` : ''}
+                            ${result.test_content ? `<pre>${result.test_content}</pre>` : ''}
+                        </div>
+                    `;
+                    this.showToast('Gerätetest erfolgreich', 'success');
+                } else {
+                    resultContent.innerHTML = `
+                        <div class="test-error">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <h5>Test fehlgeschlagen</h5>
+                            <p>${result.error}</p>
+                        </div>
+                    `;
+                    this.showToast('Gerätetest fehlgeschlagen', 'error');
+                }
+            } catch (error) {
+                resultContent.innerHTML = `
+                    <div class="test-error">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <h5>Fehler beim Test</h5>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+                this.showToast('Fehler beim Gerätetest', 'error');
+            }
+        }
+    }
+    
+    getDeviceTypeName(type) {
+        const typeNames = {
+            'printer': 'Papierdrucker',
+            'label_printer': 'Label-Printer',
+            'shipping_printer': 'Versandlabel-Printer',
+            'barcode_scanner': 'Barcode-Scanner',
+            'receipt_printer': 'Bondrucker',
+            'card_reader': 'EC-Kartengerät'
+        };
+        return typeNames[type] || type;
     }
     
     async saveDeviceConfig() {

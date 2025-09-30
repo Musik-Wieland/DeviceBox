@@ -154,13 +154,88 @@
                     </div>
                     <div class="form-group">
                         <label for="device-model">Modell</label>
-                        <input type="text" id="device-model" name="model" placeholder="z.B. EPSON TM-T20">
+                        <select id="device-model" name="model">
+                            <option value="">Modell auswählen...</option>
+                            <optgroup label="Papierdrucker">
+                                <option value="Brother HL-L2340DW">Brother HL-L2340DW</option>
+                                <option value="HP LaserJet">HP LaserJet</option>
+                                <option value="Canon PIXMA">Canon PIXMA</option>
+                            </optgroup>
+                            <optgroup label="Label-Printer">
+                                <option value="Brother QL-700">Brother QL-700</option>
+                                <option value="Brother QL-800">Brother QL-800</option>
+                                <option value="Zebra ZD420">Zebra ZD420</option>
+                            </optgroup>
+                            <optgroup label="Versandlabel-Printer">
+                                <option value="Dymo LabelWriter">Dymo LabelWriter</option>
+                                <option value="Brother QL-1100">Brother QL-1100</option>
+                            </optgroup>
+                            <optgroup label="Barcode-Scanner">
+                                <option value="Datalogic Touch 65">Datalogic Touch 65</option>
+                                <option value="Honeywell Voyager">Honeywell Voyager</option>
+                                <option value="Zebra DS2208">Zebra DS2208</option>
+                            </optgroup>
+                            <optgroup label="Bondrucker">
+                                <option value="Epson TM-T20II">Epson TM-T20II</option>
+                                <option value="Epson TM-T88VI">Epson TM-T88VI</option>
+                                <option value="Star TSP143">Star TSP143</option>
+                            </optgroup>
+                            <optgroup label="EC-Kartengerät">
+                                <option value="Ingenico Move/3500">Ingenico Move/3500</option>
+                                <option value="Verifone VX520">Verifone VX520</option>
+                                <option value="PAX A920">PAX A920</option>
+                            </optgroup>
+                        </select>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" id="cancel-config">Abbrechen</button>
                 <button class="btn btn-primary" id="save-config">Speichern</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Device Test Modal -->
+    <div class="modal" id="device-test-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Gerät testen</h3>
+                <button class="modal-close" id="close-test-modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="test-info">
+                    <div class="device-info">
+                        <h4 id="test-device-name">Gerätename</h4>
+                        <p id="test-device-type">Gerätetyp</p>
+                    </div>
+                    <div class="test-options">
+                        <h4>Test-Optionen</h4>
+                        <div class="test-buttons">
+                            <button class="btn btn-primary" id="test-print-btn" style="display: none;">
+                                <i class="fas fa-print"></i>
+                                Testdruck
+                            </button>
+                            <button class="btn btn-primary" id="test-scan-btn" style="display: none;">
+                                <i class="fas fa-barcode"></i>
+                                Test-Scan
+                            </button>
+                            <button class="btn btn-primary" id="test-transaction-btn" style="display: none;">
+                                <i class="fas fa-credit-card"></i>
+                                Test-Transaktion
+                            </button>
+                        </div>
+                    </div>
+                    <div class="test-results" id="test-results" style="display: none;">
+                        <h4>Test-Ergebnis</h4>
+                        <div class="result-content" id="result-content"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="close-test-modal-btn">Schließen</button>
             </div>
         </div>
     </div>

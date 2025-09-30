@@ -28,6 +28,28 @@ cryptography>=41.0.0
 pyusb>=1.2.1
 pyserial>=3.5
 
+# Device-specific Libraries
+# Brother QL Label Printers
+brother-ql>=0.8.4
+Pillow>=10.0.0
+
+# ESC/POS Receipt Printers (Epson TM-T20II)
+python-escpos>=3.0.0
+
+# CUPS Integration for Brother HL-L2340DW
+pycups>=2.0.1
+
+# Barcode Scanner (HID Input)
+evdev>=1.4.0
+keyboard>=0.13.5
+
+# Payment Terminal Integration
+requests>=2.31.0
+cryptography>=41.0.0
+
+# Additional USB/Serial support
+hidapi>=0.14.0
+
 # Optional: For advanced features
 # GPIO access for Raspberry Pi
 # RPi.GPIO>=0.7.1

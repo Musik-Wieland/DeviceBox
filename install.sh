@@ -321,6 +321,14 @@ install_python_deps() {
     fi
     
     success "Python-Abhängigkeiten installiert"
+    
+    # Führe Geräte-Setup aus
+    log "Konfiguriere Geräte-Support..."
+    if python device_setup.py; then
+        success "Geräte-Setup erfolgreich abgeschlossen"
+    else
+        warning "Geräte-Setup fehlgeschlagen, aber Installation wird fortgesetzt"
+    fi
 }
 
 # Erstelle Systemd-Service

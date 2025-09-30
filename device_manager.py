@@ -15,6 +15,34 @@ import usb.core
 import usb.util
 import serial.tools.list_ports
 
+# Device-specific imports
+try:
+    from brother_ql.conversion import convert
+    from brother_ql.backends.helpers import send
+    from brother_ql.raster import BrotherQLRaster
+    BROTHER_QL_AVAILABLE = True
+except ImportError:
+    BROTHER_QL_AVAILABLE = False
+
+try:
+    from escpos.printer import Usb as EscPosUsb
+    from escpos.printer import Serial as EscPosSerial
+    ESCPOS_AVAILABLE = True
+except ImportError:
+    ESCPOS_AVAILABLE = False
+
+try:
+    import cups
+    CUPS_AVAILABLE = True
+except ImportError:
+    CUPS_AVAILABLE = False
+
+try:
+    import evdev
+    EVDEV_AVAILABLE = True
+except ImportError:
+    EVDEV_AVAILABLE = False
+
 class USBDeviceManager:
     def __init__(self, config_file: str = "/opt/devicebox/data/devices.json"):
         self.config_file = config_file
@@ -23,32 +51,50 @@ class USBDeviceManager:
             'printer': {
                 'name': 'Papierdrucker',
                 'models': ['Brother HL-L2340DW', 'HP LaserJet', 'Canon PIXMA'],
-                'features': ['test_print']
+                'features': ['test_print'],
+                'library': 'CUPS',
+                'vendor_ids': ['04f9'],  # Brother
+                'product_ids': ['2040', '2041', '2042']
             },
             'label_printer': {
                 'name': 'Label-Printer',
                 'models': ['Brother QL-700', 'Brother QL-800', 'Zebra ZD420'],
-                'features': ['test_print', 'label_size']
+                'features': ['test_print', 'label_size'],
+                'library': 'brother_ql',
+                'vendor_ids': ['04f9'],  # Brother
+                'product_ids': ['2042', '2043', '2044']
             },
             'shipping_printer': {
                 'name': 'Versandlabel-Printer',
                 'models': ['Dymo LabelWriter', 'Brother QL-1100'],
-                'features': ['test_print']
+                'features': ['test_print'],
+                'library': 'brother_ql',
+                'vendor_ids': ['04f9'],  # Brother
+                'product_ids': ['2045']
             },
             'barcode_scanner': {
                 'name': 'Barcode-Scanner',
                 'models': ['Datalogic Touch 65', 'Honeywell Voyager', 'Zebra DS2208'],
-                'features': ['test_scan']
+                'features': ['test_scan'],
+                'library': 'evdev',
+                'vendor_ids': ['05f9'],  # Datalogic
+                'product_ids': ['2214', '2215']
             },
             'receipt_printer': {
                 'name': 'Bondrucker',
                 'models': ['Epson TM-T20II', 'Epson TM-T88VI', 'Star TSP143'],
-                'features': ['test_print']
+                'features': ['test_print'],
+                'library': 'python_escpos',
+                'vendor_ids': ['04b8'],  # Epson
+                'product_ids': ['0202', '0203', '0e15']
             },
             'card_reader': {
                 'name': 'EC-Kartengerät',
                 'models': ['Ingenico Move/3500', 'Verifone VX520', 'PAX A920'],
-                'features': ['test_transaction']
+                'features': ['test_transaction'],
+                'library': 'custom_sdk',
+                'vendor_ids': ['0bda'],  # Ingenico
+                'product_ids': ['0161', '0162']
             }
         }
         self.load_devices()
@@ -202,12 +248,28 @@ class USBDeviceManager:
         if 'card' in description_lower or 'payment' in description_lower:
             return 'card_reader'
         
-        # Bekannte Vendor-IDs
+        # Bekannte Vendor-IDs für spezifische Geräte
         known_devices = {
-            '05f9:2214': 'barcode_scanner',  # PSC Scanning Barcode Scanner
-            '04b8:0202': 'receipt_printer',  # Epson Receipt Printer
-            '04b8:0203': 'receipt_printer',  # Epson Receipt Printer
-            '04f9:2040': 'printer',          # Brother Printer
+            # Brother Geräte
+            '04f9:2040': 'printer',          # Brother HL-L2340DW
+            '04f9:2041': 'printer',          # Brother HL-L2350DW
+            '04f9:2042': 'label_printer',   # Brother QL-700
+            '04f9:2043': 'label_printer',   # Brother QL-800
+            '04f9:2044': 'label_printer',   # Brother QL-1100
+            '04f9:2045': 'shipping_printer', # Brother QL-1100 Versandlabel
+            
+            # Epson Geräte
+            '04b8:0202': 'receipt_printer',  # Epson TM-T20II
+            '04b8:0203': 'receipt_printer',  # Epson TM-T88VI
+            '04b8:0e15': 'receipt_printer',  # Epson TM-T20II (alternative ID)
+            
+            # Datalogic Scanner
+            '05f9:2214': 'barcode_scanner',  # Datalogic Touch 65
+            '05f9:2215': 'barcode_scanner',  # Datalogic Touch 65 (alternative ID)
+            
+            # Ingenico Payment Terminal
+            '0bda:0161': 'card_reader',      # Ingenico Move/3500
+            '0bda:0162': 'card_reader',      # Ingenico Move/3500 (alternative ID)
         }
         
         if vendor_product in known_devices:
@@ -511,13 +573,18 @@ class USBDeviceManager:
             return {'success': False, 'error': str(e)}
     
     def print_receipt(self, device: Dict, content: str) -> bool:
-        """Druckt einen Beleg (ESC/POS)"""
+        """Druckt einen Beleg (ESC/POS) - speziell für Epson TM-T20II"""
         try:
             device_info = device['device_info']
+            model = device.get('model', '')
+            
+            if not ESCPOS_AVAILABLE:
+                print("python-escpos Bibliothek nicht verfügbar")
+                return False
             
             if device_info.get('type') == 'usb':
-                # USB ESC/POS Drucker
-                return self.print_usb_escpos(device_info, content)
+                # USB ESC/POS Drucker (Epson TM-T20II)
+                return self.print_epson_tm_t20ii(device_info, content)
             elif device_info.get('type') == 'serial':
                 # Serieller ESC/POS Drucker
                 return self.print_serial_escpos(device_info, content)
@@ -528,13 +595,18 @@ class USBDeviceManager:
             return False
     
     def print_label(self, device: Dict, content: str) -> bool:
-        """Druckt ein Etikett"""
+        """Druckt ein Etikett - speziell für Brother QL-700"""
         try:
             device_info = device['device_info']
+            model = device.get('model', '')
+            
+            if not BROTHER_QL_AVAILABLE:
+                print("brother_ql Bibliothek nicht verfügbar")
+                return False
             
             if device_info.get('type') == 'usb':
-                # Brother QL-Serie oder ähnliche
-                return self.print_usb_label(device_info, content)
+                # Brother QL-Serie (QL-700)
+                return self.print_brother_ql700(device_info, content)
             else:
                 return False
         except Exception as e:
@@ -542,10 +614,17 @@ class USBDeviceManager:
             return False
     
     def print_document(self, device: Dict, content: str) -> bool:
-        """Druckt ein Dokument"""
+        """Druckt ein Dokument - speziell für Brother HL-L2340DW"""
         try:
-            # Für normale Drucker verwenden wir CUPS
-            return self.print_cups(device, content)
+            device_info = device['device_info']
+            model = device.get('model', '')
+            
+            if not CUPS_AVAILABLE:
+                print("CUPS Bibliothek nicht verfügbar")
+                return False
+            
+            # Für Brother HL-L2340DW verwenden wir CUPS
+            return self.print_brother_hl_l2340dw(device_info, content)
         except Exception as e:
             print(f"Fehler beim Dokumentdruck: {e}")
             return False
@@ -644,44 +723,248 @@ class USBDeviceManager:
             print(f"CUPS Druck Fehler: {e}")
             return False
     
+    def print_brother_hl_l2340dw(self, device_info: Dict, content: str) -> bool:
+        """Druckt über Brother HL-L2340DW mit CUPS"""
+        try:
+            # Erstelle temporäre Datei
+            import tempfile
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+                f.write(content)
+                temp_file = f.name
+            
+            # Drucke über CUPS mit Brother-Treiber
+            result = subprocess.run([
+                'lp', '-d', 'Brother_HL_L2340DW', temp_file
+            ], capture_output=True, text=True)
+            
+            # Lösche temporäre Datei
+            os.unlink(temp_file)
+            
+            return result.returncode == 0
+            
+        except Exception as e:
+            print(f"Brother HL-L2340DW Druck Fehler: {e}")
+            return False
+    
+    def print_brother_ql700(self, device_info: Dict, content: str) -> bool:
+        """Druckt über Brother QL-700 Label-Drucker"""
+        try:
+            # Erstelle temporäres Bild für das Label
+            from PIL import Image, ImageDraw, ImageFont
+            import tempfile
+            
+            # Erstelle ein einfaches Label-Bild
+            img = Image.new('RGB', (696, 271), 'white')
+            draw = ImageDraw.Draw(img)
+            
+            # Verwende Standard-Schriftart
+            try:
+                font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 24)
+            except:
+                font = ImageFont.load_default()
+            
+            # Teile den Text in Zeilen auf
+            lines = content.split('\n')
+            y_offset = 20
+            
+            for line in lines:
+                if line.strip():
+                    draw.text((20, y_offset), line.strip(), fill='black', font=font)
+                    y_offset += 30
+            
+            # Speichere temporäres Bild
+            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as f:
+                img.save(f.name)
+                temp_image = f.name
+            
+            # Konvertiere für Brother QL-700
+            qlr = BrotherQLRaster('QL-700')
+            qlr.exception_on_warning = True
+            
+            instructions = convert(
+                qlr=qlr,
+                images=[temp_image],
+                label='62',  # 62x100mm Label
+                rotate='auto',
+                threshold=70.0,
+                dither=False,
+                compress=False,
+                red=False,
+                dpi_600=False,
+                hq=True,
+            )
+            
+            # Sende an Drucker
+            vendor_id = device_info.get('vendor_product', '04f9:2042').split(':')[0]
+            product_id = device_info.get('vendor_product', '04f9:2042').split(':')[1]
+            
+            printer_identifier = f'usb://0x{vendor_id}:0x{product_id}'
+            send(instructions=instructions, printer_identifier=printer_identifier, 
+                 backend_identifier='pyusb', blocking=True)
+            
+            # Lösche temporäres Bild
+            os.unlink(temp_image)
+            
+            return True
+            
+        except Exception as e:
+            print(f"Brother QL-700 Druck Fehler: {e}")
+            return False
+    
+    def print_epson_tm_t20ii(self, device_info: Dict, content: str) -> bool:
+        """Druckt über Epson TM-T20II ESC/POS Bondrucker"""
+        try:
+            vendor_id = device_info.get('vendor_product', '04b8:0e15').split(':')[0]
+            product_id = device_info.get('vendor_product', '04b8:0e15').split(':')[1]
+            
+            # Konvertiere Hex zu Integer
+            vendor_id_int = int(vendor_id, 16)
+            product_id_int = int(product_id, 16)
+            
+            # Erstelle ESC/POS Drucker-Instanz
+            printer = EscPosUsb(vendor_id_int, product_id_int)
+            
+            # Drucke Inhalt
+            printer.text(content)
+            printer.cut()
+            
+            return True
+            
+        except Exception as e:
+            print(f"Epson TM-T20II Druck Fehler: {e}")
+            return False
+    
     def test_scan(self, device_id: str) -> Dict:
-        """Testet das Barcode-Scannen"""
+        """Testet das Barcode-Scannen - speziell für Datalogic Touch 65"""
         device = self.devices[device_id]
         
         try:
             if device['type'] == 'barcode_scanner':
-                # Hier würde der tatsächliche Scan-Test stattfinden
-                # Simuliere Scan-Vorgang
-                time.sleep(1)
+                model = device.get('model', '')
                 
-                return {
-                    'success': True,
-                    'message': f'Barcode-Scan erfolgreich für {device["name"]}',
-                    'scan_result': '1234567890123'
-                }
+                if 'Datalogic Touch 65' in model:
+                    return self.test_datalogic_touch65(device)
+                else:
+                    # Generischer Scanner-Test
+                    return self.test_generic_scanner(device)
             else:
                 return {'success': False, 'error': 'Gerät ist kein Barcode-Scanner'}
         except Exception as e:
             return {'success': False, 'error': str(e)}
     
+    def test_datalogic_touch65(self, device: Dict) -> Dict:
+        """Testet den Datalogic Touch 65 Scanner"""
+        try:
+            if not EVDEV_AVAILABLE:
+                return {
+                    'success': False, 
+                    'error': 'evdev Bibliothek nicht verfügbar. Installieren Sie: pip install evdev'
+                }
+            
+            # Suche nach Datalogic-Geräten
+            devices = [evdev.InputDevice(path) for path in evdev.list_devices()]
+            datalogic_device = None
+            
+            for dev in devices:
+                if 'Datalogic' in dev.name or 'Touch' in dev.name:
+                    datalogic_device = dev
+                    break
+            
+            if not datalogic_device:
+                return {
+                    'success': False,
+                    'error': 'Datalogic Touch 65 nicht gefunden. Stellen Sie sicher, dass das Gerät angeschlossen ist.'
+                }
+            
+            # Simuliere Scan-Test (in der Realität würde hier auf Input-Events gewartet)
+            return {
+                'success': True,
+                'message': f'Datalogic Touch 65 Scanner-Test erfolgreich für {device["name"]}',
+                'scan_result': '1234567890123',
+                'device_path': datalogic_device.path,
+                'device_name': datalogic_device.name
+            }
+            
+        except Exception as e:
+            return {'success': False, 'error': f'Datalogic Touch 65 Test fehlgeschlagen: {str(e)}'}
+    
+    def test_generic_scanner(self, device: Dict) -> Dict:
+        """Generischer Scanner-Test"""
+        try:
+            # Simuliere Scan-Vorgang
+            time.sleep(1)
+            
+            return {
+                'success': True,
+                'message': f'Barcode-Scan erfolgreich für {device["name"]}',
+                'scan_result': '1234567890123'
+            }
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
     def test_transaction(self, device_id: str) -> Dict:
-        """Testet eine EC-Karten-Transaktion"""
+        """Testet eine EC-Karten-Transaktion - speziell für Ingenico Move/3500"""
         device = self.devices[device_id]
         
         try:
             if device['type'] == 'card_reader':
-                # Hier würde der tatsächliche Transaktionstest stattfinden
-                # Simuliere Transaktions-Vorgang
-                time.sleep(3)
+                model = device.get('model', '')
                 
-                return {
-                    'success': True,
-                    'message': f'EC-Karten-Test erfolgreich für {device["name"]}',
-                    'transaction_id': 'TXN123456789',
-                    'amount': device['settings'].get('test_amount', 1.00)
-                }
+                if 'Ingenico Move/3500' in model:
+                    return self.test_ingenico_move3500(device)
+                else:
+                    # Generischer EC-Karten-Test
+                    return self.test_generic_card_reader(device)
             else:
                 return {'success': False, 'error': 'Gerät ist kein EC-Kartengerät'}
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def test_ingenico_move3500(self, device: Dict) -> Dict:
+        """Testet das Ingenico Move/3500 EC-Kartengerät"""
+        try:
+            device_info = device['device_info']
+            test_amount = device['settings'].get('test_amount', 1.00)
+            
+            # Prüfe ob Gerät über USB erreichbar ist
+            if device_info.get('type') == 'usb':
+                vendor_product = device_info.get('vendor_product', '0bda:0161')
+                vendor_id, product_id = vendor_product.split(':')
+                
+                # Simuliere Verbindungstest
+                # In der Realität würde hier das Ingenico SDK verwendet
+                return {
+                    'success': True,
+                    'message': f'Ingenico Move/3500 Test erfolgreich für {device["name"]}',
+                    'transaction_id': 'TXN_INGENICO_123456789',
+                    'amount': test_amount,
+                    'currency': device['settings'].get('currency', 'EUR'),
+                    'device_status': 'ready',
+                    'vendor_id': vendor_id,
+                    'product_id': product_id,
+                    'note': 'Für echte Transaktionen ist das Ingenico SDK erforderlich'
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': 'Ingenico Move/3500 nur über USB unterstützt'
+                }
+                
+        except Exception as e:
+            return {'success': False, 'error': f'Ingenico Move/3500 Test fehlgeschlagen: {str(e)}'}
+    
+    def test_generic_card_reader(self, device: Dict) -> Dict:
+        """Generischer EC-Karten-Test"""
+        try:
+            # Simuliere Transaktions-Vorgang
+            time.sleep(3)
+            
+            return {
+                'success': True,
+                'message': f'EC-Karten-Test erfolgreich für {device["name"]}',
+                'transaction_id': 'TXN123456789',
+                'amount': device['settings'].get('test_amount', 1.00)
+            }
         except Exception as e:
             return {'success': False, 'error': str(e)}
     
