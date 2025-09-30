@@ -249,15 +249,28 @@ class DeviceBoxUpdater:
             # Kopiere neue Version
             print(f"Kopiere neue Version nach: {self.install_dir}")
             
+            # Debug: Zeige was im extrahierten Verzeichnis ist
+            print(f"Inhalt des extrahierten Verzeichnisses: {os.listdir(extracted_dir)}")
+            
             # Kopiere alle Dateien aus dem extrahierten Verzeichnis
             for item in os.listdir(extracted_dir):
                 src = os.path.join(extracted_dir, item)
                 dst = os.path.join(self.install_dir, item)
                 
+                print(f"Kopiere: {src} -> {dst}")
+                
                 if os.path.isdir(src):
                     shutil.copytree(src, dst)
                 else:
                     shutil.copy2(src, dst)
+            
+            # Debug: Zeige was im Zielverzeichnis ist
+            print(f"Inhalt des Zielverzeichnisses: {os.listdir(self.install_dir)}")
+            
+            # Prüfe ob app.py existiert
+            app_py_path = os.path.join(self.install_dir, 'app.py')
+            if not os.path.exists(app_py_path):
+                raise Exception(f"app.py nicht gefunden nach dem Kopieren: {app_py_path}")
             
             # Stelle wichtige Dateien wieder her
             self.restore_data(old_install_dir)
