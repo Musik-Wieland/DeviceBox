@@ -321,15 +321,22 @@ class DeviceBoxUpdater:
     def run_sudo_command(self, command, check=True, capture_output=False):
         """Führt einen Befehl mit sudo aus, falls verfügbar"""
         try:
-            # Prüfe ob sudo verfügbar ist
+            # Prüfe ob wir bereits als root laufen
+            if os.geteuid() == 0:
+                # Bereits als root: Führe Befehl direkt aus
+                logger.info("Läuft bereits als root, führe Befehl direkt aus")
+                return subprocess.run(command, check=check, capture_output=capture_output, text=True)
+            
+            # Nicht als root: Prüfe ob sudo verfügbar ist
             if shutil.which('sudo'):
                 cmd = ['sudo'] + command
+                logger.info(f"Führe Befehl mit sudo aus: {' '.join(cmd)}")
+                return subprocess.run(cmd, check=check, capture_output=capture_output, text=True)
             else:
                 # Fallback: Versuche ohne sudo (falls bereits als root)
                 cmd = command
                 logger.warning("sudo nicht verfügbar, führe Befehl ohne sudo aus")
-            
-            return subprocess.run(cmd, check=check, capture_output=capture_output, text=True)
+                return subprocess.run(cmd, check=check, capture_output=capture_output, text=True)
             
         except FileNotFoundError:
             # Falls sudo nicht gefunden wird, versuche ohne sudo

@@ -112,9 +112,15 @@ class DeviceBoxApp:
             update_script = os.path.join(os.path.dirname(__file__), 'update_system.py')
             
             if os.path.exists(update_script):
-                # Führe das Skript mit sudo aus, da es systemctl-Befehle verwendet
-                result = subprocess.run(['sudo', sys.executable, update_script, 'update'], 
-                                      capture_output=True, text=True, timeout=300)
+                # Prüfe ob wir bereits als root laufen
+                if os.geteuid() == 0:
+                    # Als root: Direkt ausführen
+                    result = subprocess.run([sys.executable, update_script, 'update'], 
+                                          capture_output=True, text=True, timeout=300)
+                else:
+                    # Nicht als root: Mit sudo ausführen
+                    result = subprocess.run(['sudo', sys.executable, update_script, 'update'], 
+                                          capture_output=True, text=True, timeout=300)
                 
                 # Logge die Ausgabe für Debugging
                 print(f"Update-Skript Ausgabe: {result.stdout}")
