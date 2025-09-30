@@ -3,269 +3,166 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DeviceBox - Raspberry Pi Management</title>
+    <title>DeviceBox - USB Manager</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <meta name="theme-color" content="#007AFF">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📱</text></svg>">
 </head>
 <body>
-    <div class="container">
-        <!-- Header -->
-        <header class="header">
-            <div class="header-content">
-                <div class="logo">
-                    <div class="logo-icon">
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <i class="fas fa-cube"></i>
+                <span>DeviceBox</span>
+            </div>
+            <div class="header-info">
+                <span class="version">v{{ version }}</span>
+                <div class="status-indicator online"></div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <!-- System Status (Minimal) -->
+        <section class="status-section">
+            <div class="status-grid">
+                <div class="status-card">
+                    <div class="status-icon">
                         <i class="fas fa-microchip"></i>
                     </div>
-                    <div class="logo-text">
-                        <h1>DeviceBox</h1>
-                        <span class="subtitle">Raspberry Pi Management</span>
+                    <div class="status-info">
+                        <span class="status-label">CPU</span>
+                        <span class="status-value" id="cpu-percent">--</span>
                     </div>
                 </div>
+                <div class="status-card">
+                    <div class="status-icon">
+                        <i class="fas fa-memory"></i>
+                    </div>
+                    <div class="status-info">
+                        <span class="status-label">RAM</span>
+                        <span class="status-value" id="memory-percent">--</span>
+                    </div>
+                </div>
+                <div class="status-card">
+                    <div class="status-icon">
+                        <i class="fas fa-hdd"></i>
+                    </div>
+                    <div class="status-info">
+                        <span class="status-label">Speicher</span>
+                        <span class="status-value" id="storage-percent">--</span>
+                    </div>
+                </div>
+                <div class="status-card">
+                    <div class="status-icon">
+                        <i class="fas fa-thermometer-half"></i>
+                    </div>
+                    <div class="status-info">
+                        <span class="status-label">Temperatur</span>
+                        <span class="status-value" id="temperature">--</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- USB Device Manager -->
+        <section class="device-manager">
+            <div class="section-header">
+                <h2>USB Geräte</h2>
                 <div class="header-actions">
-                    <div class="version-info">
-                        <span class="version-badge">v{{ version }}</span>
-                    </div>
-                    <div class="status-indicator" id="connection-status">
-                        <i class="fas fa-circle"></i>
-                        <span>Verbunden</span>
-                    </div>
-                </div>
-            </div>
-        </header>
-
-        <!-- Main Content -->
-        <main class="main-content">
-            <!-- Status Cards -->
-            <div class="status-grid">
-                <!-- System Status -->
-                <div class="status-card system-card">
-                    <div class="card-header">
-                        <div class="card-icon system-icon">
-                            <i class="fas fa-server"></i>
-                        </div>
-                        <div class="card-title">
-                            <h3>System Status</h3>
-                            <span class="card-subtitle">Allgemeine Informationen</span>
-                        </div>
-                    </div>
-                    <div class="card-content" id="system-status">
-                        <div class="loading">
-                            <div class="loading-spinner"></div>
-                            <span>Lade Systemdaten...</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- CPU Status -->
-                <div class="status-card cpu-card">
-                    <div class="card-header">
-                        <div class="card-icon cpu-icon">
-                            <i class="fas fa-microchip"></i>
-                        </div>
-                        <div class="card-title">
-                            <h3>CPU</h3>
-                            <span class="card-subtitle">Prozessor-Auslastung</span>
-                        </div>
-                    </div>
-                    <div class="card-content" id="cpu-status">
-                        <div class="loading">
-                            <div class="loading-spinner"></div>
-                            <span>Lade CPU-Daten...</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Memory Status -->
-                <div class="status-card memory-card">
-                    <div class="card-header">
-                        <div class="card-icon memory-icon">
-                            <i class="fas fa-memory"></i>
-                        </div>
-                        <div class="card-title">
-                            <h3>Arbeitsspeicher</h3>
-                            <span class="card-subtitle">RAM-Verbrauch</span>
-                        </div>
-                    </div>
-                    <div class="card-content" id="memory-status">
-                        <div class="loading">
-                            <div class="loading-spinner"></div>
-                            <span>Lade Speicher-Daten...</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Storage Status -->
-                <div class="status-card storage-card">
-                    <div class="card-header">
-                        <div class="card-icon storage-icon">
-                            <i class="fas fa-hdd"></i>
-                        </div>
-                        <div class="card-title">
-                            <h3>Speicher</h3>
-                            <span class="card-subtitle">Festplatten-Speicher</span>
-                        </div>
-                    </div>
-                    <div class="card-content" id="storage-status">
-                        <div class="loading">
-                            <div class="loading-spinner"></div>
-                            <span>Lade Speicher-Daten...</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Update Section -->
-            <div class="update-section">
-                <div class="update-card">
-                    <div class="card-header">
-                        <div class="card-icon update-icon">
-                            <i class="fas fa-sync-alt"></i>
-                        </div>
-                        <div class="card-title">
-                            <h3>System Updates</h3>
-                            <span class="card-subtitle">Automatische Updates</span>
-                        </div>
-                        <div class="card-toggle">
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="auto-update-toggle" checked>
-                                <span class="toggle-slider"></span>
-                            </label>
-                            <span class="toggle-label">Auto-Update</span>
-                        </div>
-                    </div>
-                    <div class="card-content">
-                        <div class="update-info" id="update-info">
-                            <div class="loading">
-                                <div class="loading-spinner"></div>
-                                <span>Prüfe auf Updates...</span>
-                            </div>
-                        </div>
-                        <div class="update-actions" id="update-actions" style="display: none;">
-                            <button class="btn btn-primary" id="check-updates-btn">
-                                <i class="fas fa-search"></i>
-                                Jetzt prüfen
-                            </button>
-                            <button class="btn btn-success" id="update-btn" style="display: none;">
-                                <i class="fas fa-download"></i>
-                                Update installieren
-                            </button>
-                        </div>
-                        <div class="update-progress" id="update-progress" style="display: none;">
-                            <div class="progress-bar">
-                                <div class="progress-fill"></div>
-                            </div>
-                            <span class="progress-text">Update wird installiert...</span>
-                        </div>
-                        <div class="update-settings">
-                            <div class="setting-item">
-                                <span class="setting-label">Letzte Prüfung:</span>
-                                <span class="setting-value" id="last-check">Nie</span>
-                            </div>
-                            <div class="setting-item">
-                                <span class="setting-label">Nächste Prüfung:</span>
-                                <span class="setting-value" id="next-check">In 5 Minuten</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- USB Device Manager -->
-            <div class="device-manager-section">
-                <div class="device-manager-card">
-                    <div class="card-header">
-                        <div class="card-icon device-icon">
-                            <i class="fas fa-usb"></i>
-                        </div>
-                        <div class="card-title">
-                            <h3>USB Geräte-Manager</h3>
-                            <span class="card-subtitle">Verwaltung von Druckern, Scannern und EC-Kartengeräten</span>
-                        </div>
-                        <div class="card-actions">
-                            <button class="btn btn-primary" id="refresh-devices-btn">
-                                <i class="fas fa-sync-alt"></i>
-                                Geräte aktualisieren
-                            </button>
-                            <button class="btn btn-success" id="add-device-btn">
-                                <i class="fas fa-plus"></i>
-                                Gerät hinzufügen
-                            </button>
-                        </div>
-                    </div>
-                    <div class="card-content">
-                        <!-- Gerätetyp-Auswahl Modal -->
-                        <div class="device-type-selection" id="device-type-selection" style="display: none;">
-                            <h4>Gerätetyp auswählen</h4>
-                            <div class="device-types-grid" id="device-types-grid">
-                                <!-- Wird dynamisch gefüllt -->
-                            </div>
-                        </div>
-                        
-                        <!-- Verfügbare Geräte -->
-                        <div class="available-devices" id="available-devices">
-                            <h4>Verfügbare USB-Geräte</h4>
-                            <div class="devices-list" id="devices-list">
-                                <div class="loading">
-                                    <div class="loading-spinner"></div>
-                                    <span>Suche nach USB-Geräten...</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Konfigurierte Geräte -->
-                        <div class="configured-devices" id="configured-devices">
-                            <h4>Konfigurierte Geräte</h4>
-                            <div class="devices-grid" id="devices-grid">
-                                <div class="loading">
-                                    <div class="loading-spinner"></div>
-                                    <span>Lade konfigurierte Geräte...</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- System Information -->
-            <div class="info-section">
-                <div class="info-card">
-                    <div class="card-header">
-                        <div class="card-icon info-icon">
-                            <i class="fas fa-info-circle"></i>
-                        </div>
-                        <div class="card-title">
-                            <h3>System Information</h3>
-                            <span class="card-subtitle">Allgemeine Systemdaten</span>
-                        </div>
-                    </div>
-                    <div class="card-content" id="system-info">
-                        <div class="loading">
-                            <div class="loading-spinner"></div>
-                            <span>Lade Systeminformationen...</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
-
-        <!-- Footer -->
-        <footer class="footer">
-            <div class="footer-content">
-                <p>&copy; 2024 DeviceBox - Raspberry Pi Management System</p>
-                <div class="footer-links">
-                    <a href="#" id="refresh-btn">
-                        <i class="fas fa-refresh"></i>
+                    <button class="btn btn-secondary" id="refresh-devices-btn">
+                        <i class="fas fa-sync-alt"></i>
                         Aktualisieren
-                    </a>
+                    </button>
                 </div>
             </div>
-        </footer>
+
+            <!-- Available Devices -->
+            <div class="devices-section">
+                <h3>Verfügbare Geräte</h3>
+                <div class="devices-list" id="available-devices">
+                    <div class="loading-state">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span>Suche nach Geräten...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configured Devices -->
+            <div class="devices-section">
+                <h3>Konfigurierte Geräte</h3>
+                <div class="devices-grid" id="configured-devices">
+                    <div class="loading-state">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span>Lade Geräte...</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Update Section (Minimal) -->
+        <section class="update-section">
+            <div class="section-header">
+                <h2>System Updates</h2>
+                <div class="header-actions">
+                    <button class="btn btn-primary" id="check-updates-btn">
+                        <i class="fas fa-search"></i>
+                        Prüfen
+                    </button>
+                </div>
+            </div>
+            
+            <div class="update-info" id="update-info">
+                <div class="update-status">
+                    <i class="fas fa-check-circle"></i>
+                    <span>System ist aktuell</span>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Device Configuration Modal -->
+    <div class="modal" id="device-config-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Gerät konfigurieren</h3>
+                <button class="modal-close" id="close-config-modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="device-config-form">
+                    <div class="form-group">
+                        <label for="device-name">Gerätename</label>
+                        <input type="text" id="device-name" name="name" placeholder="z.B. Kassendrucker">
+                    </div>
+                    <div class="form-group">
+                        <label for="device-type">Gerätetyp</label>
+                        <select id="device-type" name="type">
+                            <option value="printer">Drucker</option>
+                            <option value="label_printer">Etikettendrucker</option>
+                            <option value="shipping_printer">Versanddrucker</option>
+                            <option value="barcode_scanner">Barcode-Scanner</option>
+                            <option value="receipt_printer">Belegdrucker</option>
+                            <option value="card_reader">Kartenleser</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="device-model">Modell</label>
+                        <input type="text" id="device-model" name="model" placeholder="z.B. EPSON TM-T20">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancel-config">Abbrechen</button>
+                <button class="btn btn-primary" id="save-config">Speichern</button>
+            </div>
+        </div>
     </div>
 
-    <!-- Toast Notifications -->
-    <div class="toast-container" id="toast-container"></div>
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
 
     <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
