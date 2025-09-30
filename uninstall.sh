@@ -102,17 +102,12 @@ main() {
     
     info "DeviceBox Deinstallation für Benutzer: $USER"
     
-    # Confirmation
+    # Confirmation - funktioniert auch über curl | bash
     echo
     warning "Dies wird DeviceBox vollständig von Ihrem System entfernen!"
-    echo -n "Möchten Sie fortfahren? (y/N): "
-    read -r REPLY
     echo
-    
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        info "Deinstallation abgebrochen"
-        exit 0
-    fi
+    echo "Drücken Sie ENTER um fortzufahren oder Ctrl+C zum Abbrechen..."
+    read -r
     
     # Deinstallation steps
     check_root
