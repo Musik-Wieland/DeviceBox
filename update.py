@@ -245,7 +245,18 @@ class DeviceBoxUpdater:
             
             # Kopiere neue Version
             print(f"Kopiere neue Version nach: {self.install_dir}")
-            shutil.copytree(extracted_dir, self.install_dir)
+            
+            # Kopiere alle Dateien aus dem extrahierten Verzeichnis
+            for item in os.listdir(extracted_dir):
+                src = os.path.join(extracted_dir, item)
+                dst = os.path.join(self.install_dir, item)
+                
+                if os.path.isdir(src):
+                    if os.path.exists(dst):
+                        shutil.rmtree(dst)
+                    shutil.copytree(src, dst)
+                else:
+                    shutil.copy2(src, dst)
             
             # Stelle wichtige Dateien wieder her
             self.restore_data(old_install_dir)
@@ -311,27 +322,48 @@ class DeviceBoxUpdater:
     def restore_data(self, old_install_dir):
         """Stellt wichtige Daten aus der alten Installation wieder her"""
         try:
-            # Stelle Datenverzeichnis wieder her
+            # Stelle nur wichtige Daten wieder her, NICHT die gesamte Installation
+            
+            # 1. Datenverzeichnis (Gerätekonfigurationen, etc.)
             old_data_dir = os.path.join(old_install_dir, 'data')
             if os.path.exists(old_data_dir):
                 if os.path.exists(self.data_dir):
                     shutil.rmtree(self.data_dir)
                 shutil.copytree(old_data_dir, self.data_dir)
+                print("Datenverzeichnis wiederhergestellt")
             
-            # Stelle Konfigurationsdatei wieder her
-            old_config = os.path.join(old_install_dir, 'config.json')
-            if os.path.exists(old_config):
-                shutil.copy2(old_config, self.config_file)
+            # 2. Konfigurationsdateien (nur spezifische)
+            config_files = ['config.json', 'devices.json']
+            for config_file in config_files:
+                old_config = os.path.join(old_install_dir, config_file)
+                if os.path.exists(old_config):
+                    new_config = os.path.join(self.install_dir, config_file)
+                    shutil.copy2(old_config, new_config)
+                    print(f"Konfigurationsdatei {config_file} wiederhergestellt")
             
-            # Stelle virtuelle Umgebung wieder her falls vorhanden
+            # 3. Logs-Verzeichnis
+            old_logs_dir = os.path.join(old_install_dir, 'logs')
+            if os.path.exists(old_logs_dir):
+                new_logs_dir = os.path.join(self.install_dir, 'logs')
+                if not os.path.exists(new_logs_dir):
+                    os.makedirs(new_logs_dir)
+                # Kopiere nur neue Logs, nicht alle
+                for log_file in os.listdir(old_logs_dir):
+                    if log_file.endswith('.log'):
+                        shutil.copy2(os.path.join(old_logs_dir, log_file), 
+                                   os.path.join(new_logs_dir, log_file))
+                print("Logs wiederhergestellt")
+            
+            # 4. Virtuelle Umgebung (falls vorhanden)
             old_venv = os.path.join(old_install_dir, 'venv')
             if os.path.exists(old_venv):
                 new_venv = os.path.join(self.install_dir, 'venv')
                 if os.path.exists(new_venv):
                     shutil.rmtree(new_venv)
                 shutil.copytree(old_venv, new_venv)
+                print("Virtuelle Umgebung wiederhergestellt")
             
-            print("Daten erfolgreich wiederhergestellt")
+            print("Wichtige Daten erfolgreich wiederhergestellt")
         except Exception as e:
             print(f"Warnung beim Wiederherstellen der Daten: {e}")
     
