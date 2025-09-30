@@ -1,0 +1,27 @@
+[Unit]
+Description=DeviceBox - Raspberry Pi Device Management
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/opt/devicebox
+Environment=PATH=/opt/devicebox/venv/bin
+Environment=GITHUB_REPO=your-username/devicebox
+Environment=APP_NAME=devicebox
+Environment=INSTALL_DIR=/opt/devicebox
+Environment=DATA_DIR=/opt/devicebox/data
+Environment=PORT=8080
+Environment=HOST=0.0.0.0
+Environment=DEBUG=False
+ExecStart=/opt/devicebox/venv/bin/python /opt/devicebox/app.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=devicebox
+
+[Install]
+WantedBy=multi-user.target
