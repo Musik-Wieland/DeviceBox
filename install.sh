@@ -175,8 +175,39 @@ EOF
 setup_service() {
     log "Richte Systemd-Service ein..."
     
+    # Create service file with current user
+    cat > /tmp/devicebox.service << EOF
+[Unit]
+Description=DeviceBox - Raspberry Pi Web Interface
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=$USER
+Group=$USER
+WorkingDirectory=/home/$USER/devicebox
+Environment=PATH=/home/$USER/devicebox/venv/bin
+ExecStart=/home/$USER/devicebox/venv/bin/gunicorn --bind 0.0.0.0:5000 --workers 2 app:app
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Sicherheitseinstellungen
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/home/$USER/devicebox
+ReadWritePaths=/tmp
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    
     # Copy service file
-    sudo cp devicebox.service /etc/systemd/system/
+    sudo cp /tmp/devicebox.service /etc/systemd/system/
     
     # Reload systemd
     sudo systemctl daemon-reload
