@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# DeviceBox Installation Script für Raspberry Pi
-# Einzeiler Installation: curl -sSL https://raw.githubusercontent.com/Musik-Wieland/DeviceBox/main/install.sh | bash
+# DeviceBox - Universelles Installationsskript für Raspberry Pi
+# Einzeiler: curl -sSL https://raw.githubusercontent.com/Musik-Wieland/DeviceBox/main/install.sh | bash
 
 set -e
 
@@ -12,7 +12,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Logging Funktion
+# Logging Funktionen
 log() {
     echo -e "${GREEN}[$(date +'%Y-%m-%d %H:%M:%S')] $1${NC}"
 }
@@ -47,9 +47,10 @@ print_banner() {
 check_system() {
     log "Überprüfe System..."
     
-    # Check if running on Raspberry Pi
-    if ! grep -q "Raspberry Pi" /proc/cpuinfo 2>/dev/null; then
-        warning "Dieses Script ist für Raspberry Pi optimiert"
+    # Check if running as root
+    if [[ $EUID -eq 0 ]]; then
+        error "Führen Sie dieses Script nicht als root aus"
+        exit 1
     fi
     
     # Check OS
@@ -59,9 +60,7 @@ check_system() {
     fi
     
     source /etc/os-release
-    if [[ "$ID" != "raspbian" && "$ID" != "debian" ]]; then
-        warning "Ungetestetes Betriebssystem: $ID"
-    fi
+    info "Betriebssystem: $ID $VERSION_ID"
     
     # Check Python
     if ! command -v python3 &> /dev/null; then
@@ -94,54 +93,36 @@ install_devicebox() {
     
     # Create directory
     INSTALL_DIR="/home/$USER/devicebox"
+    
+    # Remove existing installation
     if [[ -d "$INSTALL_DIR" ]]; then
         warning "DeviceBox ist bereits installiert"
-        read -p "Möchten Sie eine Neuinstallation durchführen? (y/N): " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            log "Entferne alte Installation..."
-            sudo systemctl stop devicebox 2>/dev/null || true
-            sudo systemctl disable devicebox 2>/dev/null || true
-            rm -rf "$INSTALL_DIR"
-        else
-            log "Installation abgebrochen"
-            exit 0
-        fi
+        log "Entferne alte Installation..."
+        sudo systemctl stop devicebox 2>/dev/null || true
+        sudo systemctl disable devicebox 2>/dev/null || true
+        sudo rm -f /etc/systemd/system/devicebox.service
+        sudo systemctl daemon-reload
+        rm -rf "$INSTALL_DIR"
     fi
     
     # Create installation directory
     mkdir -p "$INSTALL_DIR"
     cd "$INSTALL_DIR"
     
-    # Clone repository (fallback to local files if not available)
-    if command -v git &> /dev/null; then
-        log "Klone Repository..."
-        
-        # Check for GitHub token (optional für öffentliche Repositories)
-        if [[ -n "$GITHUB_TOKEN" ]]; then
-            log "Verwende GitHub Token für höhere Rate Limits..."
-            git clone https://${GITHUB_TOKEN}@github.com/Musik-Wieland/DeviceBox.git . || {
-                warning "Repository nicht verfügbar, verwende lokale Dateien..."
-                # Copy local files if git clone fails
-                cp -r /tmp/devicebox/* . 2>/dev/null || {
-                    error "Keine lokalen Dateien gefunden"
-                    exit 1
-                }
-            }
-        else
-            log "Klone öffentliches Repository..."
-            git clone https://github.com/Musik-Wieland/DeviceBox.git . || {
-                warning "Repository nicht verfügbar, verwende lokale Dateien..."
-                # Copy local files if git clone fails
-                cp -r /tmp/devicebox/* . 2>/dev/null || {
-                    error "Keine lokalen Dateien gefunden"
-                    exit 1
-                }
-            }
-        fi
+    # Clone repository
+    log "Klone Repository..."
+    if [[ -n "$GITHUB_TOKEN" ]]; then
+        log "Verwende GitHub Token für höhere Rate Limits..."
+        git clone https://${GITHUB_TOKEN}@github.com/Musik-Wieland/DeviceBox.git . || {
+            error "Repository konnte nicht geklont werden"
+            exit 1
+        }
     else
-        error "Git ist nicht installiert"
-        exit 1
+        log "Klone öffentliches Repository..."
+        git clone https://github.com/Musik-Wieland/DeviceBox.git . || {
+            error "Repository konnte nicht geklont werden"
+            exit 1
+        }
     fi
     
     # Create virtual environment
@@ -188,19 +169,11 @@ User=$USER
 Group=$USER
 WorkingDirectory=/home/$USER/devicebox
 Environment=PATH=/home/$USER/devicebox/venv/bin
-ExecStart=/home/$USER/devicebox/venv/bin/gunicorn --bind 0.0.0.0:5000 --workers 2 app:app
+ExecStart=/home/$USER/devicebox/venv/bin/python /home/$USER/devicebox/app.py
 Restart=always
 RestartSec=10
 StandardOutput=journal
 StandardError=journal
-
-# Sicherheitseinstellungen
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=strict
-ProtectHome=true
-ReadWritePaths=/home/$USER/devicebox
-ReadWritePaths=/tmp
 
 [Install]
 WantedBy=multi-user.target
@@ -219,6 +192,7 @@ EOF
     sudo systemctl start devicebox
     
     # Check status
+    sleep 3
     if sudo systemctl is-active --quiet devicebox; then
         log "DeviceBox Service läuft erfolgreich"
     else
@@ -247,8 +221,6 @@ setup_firewall() {
 
 # Get IP address
 get_ip_address() {
-    log "Ermittle IP-Adresse..."
-    
     # Try different methods to get IP
     IP_ADDRESS=""
     
@@ -274,16 +246,7 @@ get_ip_address() {
 main() {
     print_banner
     
-    # Check if running as root
-    if [[ $EUID -eq 0 ]]; then
-        error "Führen Sie dieses Script nicht als root aus"
-        exit 1
-    fi
-    
-    # Check if user is pi (optional warning)
-    if [[ "$USER" != "pi" ]]; then
-        info "Script läuft unter Benutzer '$USER' (angepasst für alle Benutzer)"
-    fi
+    info "DeviceBox Installation für Benutzer: $USER"
     
     # Installation steps
     check_system
