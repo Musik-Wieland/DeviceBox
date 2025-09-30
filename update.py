@@ -243,6 +243,9 @@ class DeviceBoxUpdater:
                 print(f"Verschiebe aktuelle Installation nach: {old_install_dir}")
                 shutil.move(self.install_dir, old_install_dir)
             
+            # Erstelle neues Installationsverzeichnis
+            os.makedirs(self.install_dir, exist_ok=True)
+            
             # Kopiere neue Version
             print(f"Kopiere neue Version nach: {self.install_dir}")
             
@@ -252,8 +255,6 @@ class DeviceBoxUpdater:
                 dst = os.path.join(self.install_dir, item)
                 
                 if os.path.isdir(src):
-                    if os.path.exists(dst):
-                        shutil.rmtree(dst)
                     shutil.copytree(src, dst)
                 else:
                     shutil.copy2(src, dst)
