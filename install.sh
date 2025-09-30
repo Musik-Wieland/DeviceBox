@@ -93,7 +93,7 @@ install_devicebox() {
     log "Installiere DeviceBox..."
     
     # Create directory
-    INSTALL_DIR="/home/pi/devicebox"
+    INSTALL_DIR="/home/$USER/devicebox"
     if [[ -d "$INSTALL_DIR" ]]; then
         warning "DeviceBox ist bereits installiert"
         read -p "Möchten Sie eine Neuinstallation durchführen? (y/N): " -n 1 -r
@@ -165,7 +165,7 @@ install_devicebox() {
 EOF
     
     # Set permissions
-    chown -R pi:pi "$INSTALL_DIR"
+    chown -R $USER:$USER "$INSTALL_DIR"
     chmod +x app.py
     
     log "DeviceBox installiert"
@@ -249,14 +249,9 @@ main() {
         exit 1
     fi
     
-    # Check if user is pi
+    # Check if user is pi (optional warning)
     if [[ "$USER" != "pi" ]]; then
-        warning "Dieses Script ist für den Benutzer 'pi' optimiert"
-        read -p "Möchten Sie fortfahren? (y/N): " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            exit 0
-        fi
+        info "Script läuft unter Benutzer '$USER' (angepasst für alle Benutzer)"
     fi
     
     # Installation steps

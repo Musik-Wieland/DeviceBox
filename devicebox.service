@@ -5,11 +5,11 @@ Wants=network.target
 
 [Service]
 Type=simple
-User=pi
-Group=pi
-WorkingDirectory=/home/pi/devicebox
-Environment=PATH=/home/pi/devicebox/venv/bin
-ExecStart=/home/pi/devicebox/venv/bin/gunicorn --bind 0.0.0.0:5000 --workers 2 app:app
+User=%i
+Group=%i
+WorkingDirectory=/home/%i/devicebox
+Environment=PATH=/home/%i/devicebox/venv/bin
+ExecStart=/home/%i/devicebox/venv/bin/gunicorn --bind 0.0.0.0:5000 --workers 2 app:app
 Restart=always
 RestartSec=10
 StandardOutput=journal
@@ -20,7 +20,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/home/pi/devicebox
+ReadWritePaths=/home/%i/devicebox
 ReadWritePaths=/tmp
 
 [Install]
