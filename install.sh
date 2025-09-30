@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # DeviceBox Installation Script für Raspberry Pi
-# Einzeiler Installation: curl -sSL https://raw.githubusercontent.com/yourusername/devicebox/main/install.sh | bash
+# Einzeiler Installation: curl -sSL https://raw.githubusercontent.com/Musik-Wieland/DeviceBox/main/install.sh | bash
 
 set -e
 
@@ -119,7 +119,7 @@ install_devicebox() {
         # Check for GitHub token for private repositories
         if [[ -n "$GITHUB_TOKEN" ]]; then
             log "Verwende GitHub Token für privates Repository..."
-            git clone https://${GITHUB_TOKEN}@github.com/yourusername/devicebox.git . || {
+            git clone https://${GITHUB_TOKEN}@github.com/Musik-Wieland/DeviceBox.git . || {
                 warning "Repository nicht verfügbar, verwende lokale Dateien..."
                 # Copy local files if git clone fails
                 cp -r /tmp/devicebox/* . 2>/dev/null || {
@@ -128,7 +128,7 @@ install_devicebox() {
                 }
             }
         else
-            git clone https://github.com/yourusername/devicebox.git . || {
+            git clone https://github.com/Musik-Wieland/DeviceBox.git . || {
                 warning "Repository nicht verfügbar, verwende lokale Dateien..."
                 # Copy local files if git clone fails
                 cp -r /tmp/devicebox/* . 2>/dev/null || {

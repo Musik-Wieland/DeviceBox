@@ -14,7 +14,7 @@ from git import Repo
 
 class UpdateManager:
     def __init__(self):
-        self.repo_url = "https://github.com/yourusername/devicebox.git"
+        self.repo_url = "https://github.com/Musik-Wieland/DeviceBox.git"
         self.current_dir = os.path.dirname(os.path.abspath(__file__))
         self.version_file = os.path.join(self.current_dir, 'version.json')
         self.backup_dir = os.path.join(self.current_dir, 'backup')
@@ -43,7 +43,7 @@ class UpdateManager:
         """Auf Updates prüfen"""
         try:
             # GitHub API für neueste Release
-            api_url = "https://api.github.com/repos/yourusername/devicebox/releases/latest"
+            api_url = "https://api.github.com/repos/Musik-Wieland/DeviceBox/releases/latest"
             
             # Für private Repositories: GitHub Token verwenden
             headers = {}
