@@ -20,8 +20,14 @@ class DeviceBoxApp {
     bindEvents() {
         // Update Button Events
         const checkUpdatesBtn = document.getElementById('check-updates-btn');
+        const updateBtn = document.getElementById('update-btn');
+        
         if (checkUpdatesBtn) {
             checkUpdatesBtn.addEventListener('click', () => this.checkForUpdates());
+        }
+        
+        if (updateBtn) {
+            updateBtn.addEventListener('click', () => this.performUpdate());
         }
         
         // Device Manager Events
@@ -150,6 +156,8 @@ class DeviceBoxApp {
     
     updateUpdateInfo(data) {
         const container = document.getElementById('update-info');
+        const updateBtn = document.getElementById('update-btn');
+        
         if (!container) return;
         
         if (data.update_available) {
@@ -162,6 +170,10 @@ class DeviceBoxApp {
                     </div>
                 </div>
             `;
+            
+            if (updateBtn) {
+                updateBtn.style.display = 'inline-flex';
+            }
         } else {
             container.innerHTML = `
                 <div class="update-status">
@@ -169,6 +181,10 @@ class DeviceBoxApp {
                     <span>System ist aktuell (v${data.current_version})</span>
                 </div>
             `;
+            
+            if (updateBtn) {
+                updateBtn.style.display = 'none';
+            }
         }
     }
     
@@ -187,23 +203,41 @@ class DeviceBoxApp {
         `;
     }
     
-    async checkForUpdates() {
-        const btn = document.getElementById('check-updates-btn');
-        if (btn) {
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Prüfe...';
+    async performUpdate() {
+        if (this.isUpdating) {
+            this.showToast('Update bereits in Bearbeitung', 'warning');
+            return;
         }
         
+        this.isUpdating = true;
+        
+        const updateBtn = document.getElementById('update-btn');
+        if (updateBtn) updateBtn.disabled = true;
+        
         try {
-            await this.loadUpdateInfo();
-            this.showToast('Update-Check abgeschlossen', 'success');
-        } catch (error) {
-            this.showToast('Update-Check fehlgeschlagen', 'error');
-        } finally {
-            if (btn) {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-search"></i> Prüfen';
+            const response = await fetch('/api/update', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                this.showToast('Update erfolgreich abgeschlossen!', 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            } else {
+                throw new Error(data.error || 'Update fehlgeschlagen');
             }
+            
+        } catch (error) {
+            this.showToast(`Update fehlgeschlagen: ${error.message}`, 'error');
+        } finally {
+            this.isUpdating = false;
+            if (updateBtn) updateBtn.disabled = false;
         }
     }
     
