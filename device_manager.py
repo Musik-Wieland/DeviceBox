@@ -79,18 +79,22 @@ class USBDeviceManager:
         """Ermittelt alle verfügbaren USB-Geräte"""
         devices = []
         
+        # USB-Geräte über lsusb ermitteln (Raspberry Pi)
         try:
-            # USB-Geräte über lsusb ermitteln (Raspberry Pi)
-            result = subprocess.run(['lsusb'], capture_output=True, text=True)
+            result = subprocess.run(['lsusb'], capture_output=True, text=True, timeout=10)
             if result.returncode == 0:
                 for line in result.stdout.strip().split('\n'):
-                    if line:
+                    if line and 'Bus' in line:
                         parts = line.split()
                         if len(parts) >= 6:
                             bus = parts[1]
                             device_id = parts[3].rstrip(':')
                             vendor_product = parts[5]
                             description = ' '.join(parts[6:]) if len(parts) > 6 else ''
+                            
+                            # Filtere System-Geräte heraus
+                            if self.is_system_device(description, vendor_product):
+                                continue
                             
                             # Extrahiere Hersteller aus der Beschreibung
                             manufacturer = self.extract_manufacturer(description)
@@ -106,13 +110,17 @@ class USBDeviceManager:
         except Exception as e:
             print(f"Fehler beim Ermitteln der USB-Geräte: {e}")
         
-        # Serielle Geräte ermitteln
+        # Serielle Geräte ermitteln (nur echte Geräte, keine System-Ports)
         try:
             serial_ports = serial.tools.list_ports.comports()
             for port in serial_ports:
+                # Filtere System-Ports heraus
+                if self.is_system_serial_port(port.device):
+                    continue
+                    
                 devices.append({
                     'port': port.device,
-                    'description': port.description,
+                    'description': port.description or 'Serielles Gerät',
                     'manufacturer': port.manufacturer,
                     'serial_number': port.serial_number,
                     'type': 'serial'
@@ -121,6 +129,40 @@ class USBDeviceManager:
             print(f"Fehler beim Ermitteln der seriellen Geräte: {e}")
         
         return devices
+    
+    def is_system_device(self, description: str, vendor_product: str) -> bool:
+        """Prüft ob es sich um ein System-Gerät handelt"""
+        system_keywords = [
+            'root hub', 'hub', 'ethernet', 'wifi', 'bluetooth', 'camera',
+            'keyboard', 'mouse', 'audio', 'mass storage', 'usb hub'
+        ]
+        
+        description_lower = description.lower()
+        for keyword in system_keywords:
+            if keyword in description_lower:
+                return True
+        return False
+    
+    def is_system_serial_port(self, port: str) -> bool:
+        """Prüft ob es sich um einen System-Serial-Port handelt"""
+        system_ports = [
+            '/dev/ttyAMA0', '/dev/ttyAMA1', '/dev/ttyAMA2', '/dev/ttyAMA3',
+            '/dev/ttyAMA4', '/dev/ttyAMA5', '/dev/ttyAMA6', '/dev/ttyAMA7',
+            '/dev/ttyAMA8', '/dev/ttyAMA9', '/dev/ttyAMA10', '/dev/ttyAMA11',
+            '/dev/ttyAMA12', '/dev/ttyAMA13', '/dev/ttyAMA14', '/dev/ttyAMA15',
+            '/dev/ttyS0', '/dev/ttyS1', '/dev/ttyS2', '/dev/ttyS3',
+            '/dev/serial0', '/dev/serial1', '/dev/serial2',
+            '/dev/ttyUSB0', '/dev/ttyUSB1', '/dev/ttyUSB2', '/dev/ttyUSB3',
+            '/dev/ttyUSB4', '/dev/ttyUSB5', '/dev/ttyUSB6', '/dev/ttyUSB7',
+            '/dev/ttyUSB8', '/dev/ttyUSB9', '/dev/ttyUSB10', '/dev/ttyUSB11',
+            '/dev/ttyUSB12', '/dev/ttyUSB13', '/dev/ttyUSB14', '/dev/ttyUSB15',
+            '/dev/ttyACM0', '/dev/ttyACM1', '/dev/ttyACM2', '/dev/ttyACM3',
+            '/dev/ttyACM4', '/dev/ttyACM5', '/dev/ttyACM6', '/dev/ttyACM7',
+            '/dev/ttyACM8', '/dev/ttyACM9', '/dev/ttyACM10', '/dev/ttyACM11',
+            '/dev/ttyACM12', '/dev/ttyACM13', '/dev/ttyACM14', '/dev/ttyACM15'
+        ]
+        
+        return port in system_ports
     
     def extract_manufacturer(self, description: str) -> str:
         """Extrahiert den Hersteller aus der Gerätebeschreibung"""
