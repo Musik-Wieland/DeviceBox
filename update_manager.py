@@ -117,7 +117,7 @@ class UpdateManager:
                 repo = Repo.clone_from(self.repo_url, temp_dir)
             
             # Dateien kopieren (außer Konfigurationsdateien)
-            exclude_files = ['config.json', 'data/', 'logs/', 'backup/']
+            exclude_files = ['config.json', 'data/', 'logs/', 'backup/', 'devicebox.service']
             
             for root, dirs, files in os.walk(temp_dir):
                 for file in files:
