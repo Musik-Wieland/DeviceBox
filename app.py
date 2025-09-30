@@ -89,9 +89,23 @@ class DeviceBoxApp:
             ], capture_output=True, text=True, timeout=30)
             
             if result.returncode == 0:
-                import json
-                update_info = json.loads(result.stdout)
-                return update_info
+                try:
+                    import json
+                    # Suche nach JSON in der Ausgabe
+                    output_lines = result.stdout.strip().split('\n')
+                    json_line = None
+                    for line in output_lines:
+                        if line.strip().startswith('{'):
+                            json_line = line.strip()
+                            break
+                    
+                    if json_line:
+                        update_info = json.loads(json_line)
+                        return update_info
+                    else:
+                        return {'error': 'Keine JSON-Antwort vom Update-System'}
+                except json.JSONDecodeError as e:
+                    return {'error': f'JSON-Parse-Fehler: {e}'}
             else:
                 return {'error': f'Update-Check fehlgeschlagen: {result.stderr}'}
         except Exception as e:

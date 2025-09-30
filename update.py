@@ -47,17 +47,13 @@ class DeviceBoxUpdater:
             if response.status_code == 200:
                 return response.json()
             elif response.status_code == 404:
-                print("Keine Releases verfügbar")
                 return None
             elif response.status_code == 403:
-                print("GitHub API Rate Limit erreicht - verwende Fallback")
                 return self.get_latest_release_fallback()
             else:
-                print(f"GitHub API Fehler: {response.status_code}")
                 return self.get_latest_release_fallback()
                 
         except Exception as e:
-            print(f"Fehler beim Abrufen der Release-Informationen: {e}")
             return self.get_latest_release_fallback()
     
     def get_latest_release_fallback(self):
@@ -85,21 +81,16 @@ class DeviceBoxUpdater:
                         }]
                     }
             
-            print("Keine Releases über Fallback-Methode gefunden")
             return None
             
         except Exception as e:
-            print(f"Fallback-Methode fehlgeschlagen: {e}")
             return None
     
     def check_for_updates(self):
         """Prüft auf verfügbare Updates"""
         try:
-            print("Prüfe auf Updates...")
-            
             # Aktuelle Version
             current_version = self.get_current_version()
-            print(f"Aktuelle Version: {current_version}")
             
             # Neueste Release
             latest_release = self.get_latest_release()
@@ -112,7 +103,6 @@ class DeviceBoxUpdater:
                 }
             
             latest_version = latest_release['tag_name'].lstrip('v')
-            print(f"Neueste Version: {latest_version}")
             
             # Version vergleichen
             if self.compare_versions(current_version, latest_version) < 0:
@@ -132,7 +122,6 @@ class DeviceBoxUpdater:
                 }
                 
         except Exception as e:
-            print(f"Fehler beim Update-Check: {e}")
             return {
                 'update_available': False,
                 'current_version': self.get_current_version(),
@@ -413,7 +402,7 @@ def main():
         updater = DeviceBoxUpdater()
         
         if command == "check":
-            # Nur prüfen
+            # Nur prüfen - nur JSON ausgeben
             update_info = updater.check_for_updates()
             print(json.dumps(update_info, indent=2))
             
@@ -423,11 +412,10 @@ def main():
             sys.exit(0 if success else 1)
             
         else:
-            print("Unbekannter Befehl. Verfügbare Befehle: check, update")
+            print(json.dumps({'error': 'Unbekannter Befehl. Verfügbare Befehle: check, update'}, indent=2))
             sys.exit(1)
     else:
-        print("DeviceBox Update System")
-        print("Verwendung: python3 update.py [check|update]")
+        print(json.dumps({'error': 'DeviceBox Update System - Verwendung: python3 update.py [check|update]'}, indent=2))
         sys.exit(1)
 
 if __name__ == "__main__":

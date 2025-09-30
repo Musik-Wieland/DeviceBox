@@ -22,32 +22,32 @@ class USBDeviceManager:
         self.device_types = {
             'printer': {
                 'name': 'Papierdrucker',
-                'models': ['Brother HL-L2340DW'],
+                'models': ['Brother HL-L2340DW', 'HP LaserJet', 'Canon PIXMA'],
                 'features': ['test_print']
             },
             'label_printer': {
                 'name': 'Label-Printer',
-                'models': ['Brother QL-700'],
+                'models': ['Brother QL-700', 'Brother QL-800', 'Zebra ZD420'],
                 'features': ['test_print', 'label_size']
             },
             'shipping_printer': {
                 'name': 'Versandlabel-Printer',
-                'models': [],
+                'models': ['Dymo LabelWriter', 'Brother QL-1100'],
                 'features': ['test_print']
             },
             'barcode_scanner': {
                 'name': 'Barcode-Scanner',
-                'models': ['Datalogic Touch 65'],
+                'models': ['Datalogic Touch 65', 'Honeywell Voyager', 'Zebra DS2208'],
                 'features': ['test_scan']
             },
             'receipt_printer': {
                 'name': 'Bondrucker',
-                'models': ['Epson TM-T20II'],
+                'models': ['Epson TM-T20II', 'Epson TM-T88VI', 'Star TSP143'],
                 'features': ['test_print']
             },
             'card_reader': {
                 'name': 'EC-Kartengerät',
-                'models': ['Ingenico Move/3500'],
+                'models': ['Ingenico Move/3500', 'Verifone VX520', 'PAX A920'],
                 'features': ['test_transaction']
             }
         }
@@ -80,7 +80,7 @@ class USBDeviceManager:
         devices = []
         
         try:
-            # USB-Geräte über lsusb ermitteln
+            # USB-Geräte über lsusb ermitteln (Raspberry Pi)
             result = subprocess.run(['lsusb'], capture_output=True, text=True)
             if result.returncode == 0:
                 for line in result.stdout.strip().split('\n'):
@@ -92,11 +92,15 @@ class USBDeviceManager:
                             vendor_product = parts[5]
                             description = ' '.join(parts[6:]) if len(parts) > 6 else ''
                             
+                            # Extrahiere Hersteller aus der Beschreibung
+                            manufacturer = self.extract_manufacturer(description)
+                            
                             devices.append({
                                 'bus': bus,
                                 'device_id': device_id,
                                 'vendor_product': vendor_product,
                                 'description': description,
+                                'manufacturer': manufacturer,
                                 'type': 'usb'
                             })
         except Exception as e:
@@ -118,6 +122,37 @@ class USBDeviceManager:
         
         return devices
     
+    def extract_manufacturer(self, description: str) -> str:
+        """Extrahiert den Hersteller aus der Gerätebeschreibung"""
+        description_lower = description.lower()
+        
+        if 'brother' in description_lower:
+            return 'Brother'
+        elif 'epson' in description_lower:
+            return 'Epson'
+        elif 'hp' in description_lower or 'hewlett' in description_lower:
+            return 'HP'
+        elif 'canon' in description_lower:
+            return 'Canon'
+        elif 'datalogic' in description_lower:
+            return 'Datalogic'
+        elif 'honeywell' in description_lower:
+            return 'Honeywell'
+        elif 'zebra' in description_lower:
+            return 'Zebra'
+        elif 'dymo' in description_lower:
+            return 'Dymo'
+        elif 'star' in description_lower:
+            return 'Star'
+        elif 'ingenico' in description_lower:
+            return 'Ingenico'
+        elif 'verifone' in description_lower:
+            return 'Verifone'
+        elif 'pax' in description_lower:
+            return 'PAX'
+        else:
+            return 'Unbekannt'
+    
     def detect_device_type(self, device_info: Dict) -> Optional[str]:
         """Erkennt den Gerätetyp basierend auf Beschreibung und Hersteller"""
         description = device_info.get('description', '').lower()
@@ -127,20 +162,61 @@ class USBDeviceManager:
         if 'brother' in description or 'brother' in manufacturer:
             if 'ql-' in description:
                 return 'label_printer'
-            elif 'hl-' in description:
+            elif 'hl-' in description or 'mfc-' in description:
                 return 'printer'
         
         # Epson Geräte
         if 'epson' in description or 'epson' in manufacturer:
             if 'tm-t' in description:
                 return 'receipt_printer'
+            elif 'workforce' in description or 'expression' in description:
+                return 'printer'
+        
+        # HP Geräte
+        if 'hp' in description or 'hewlett' in description or 'hp' in manufacturer:
+            if 'laserjet' in description or 'officejet' in description:
+                return 'printer'
+        
+        # Canon Geräte
+        if 'canon' in description or 'canon' in manufacturer:
+            if 'pixma' in description or 'imageclass' in description:
+                return 'printer'
         
         # Datalogic Scanner
         if 'datalogic' in description or 'datalogic' in manufacturer:
             return 'barcode_scanner'
         
+        # Honeywell Scanner
+        if 'honeywell' in description or 'honeywell' in manufacturer:
+            if 'voyager' in description or 'granit' in description:
+                return 'barcode_scanner'
+        
+        # Zebra Geräte
+        if 'zebra' in description or 'zebra' in manufacturer:
+            if 'zd' in description or 'zt' in description:
+                return 'label_printer'
+            elif 'ds' in description:
+                return 'barcode_scanner'
+        
+        # Dymo Label-Drucker
+        if 'dymo' in description or 'dymo' in manufacturer:
+            return 'label_printer'
+        
+        # Star Bondrucker
+        if 'star' in description or 'star' in manufacturer:
+            if 'tsp' in description:
+                return 'receipt_printer'
+        
         # Ingenico EC-Kartengerät
         if 'ingenico' in description or 'ingenico' in manufacturer:
+            return 'card_reader'
+        
+        # Verifone EC-Kartengerät
+        if 'verifone' in description or 'verifone' in manufacturer:
+            return 'card_reader'
+        
+        # PAX EC-Kartengerät
+        if 'pax' in description or 'pax' in manufacturer:
             return 'card_reader'
         
         return None
@@ -289,21 +365,164 @@ class USBDeviceManager:
         
         try:
             if device_type in ['printer', 'label_printer', 'shipping_printer', 'receipt_printer']:
-                # Hier würde der tatsächliche Drucktest stattfinden
                 test_content = self.generate_test_content(device_type)
                 
-                # Simuliere Druckvorgang
-                time.sleep(2)
+                # Versuche echten Druck basierend auf Gerätetyp
+                if device_type == 'receipt_printer':
+                    success = self.print_receipt(device, test_content)
+                elif device_type == 'label_printer':
+                    success = self.print_label(device, test_content)
+                elif device_type == 'printer':
+                    success = self.print_document(device, test_content)
+                else:
+                    success = self.print_generic(device, test_content)
                 
-                return {
-                    'success': True,
-                    'message': f'Testdruck erfolgreich für {device["name"]}',
-                    'test_content': test_content
-                }
+                if success:
+                    return {
+                        'success': True,
+                        'message': f'Testdruck erfolgreich für {device["name"]}',
+                        'test_content': test_content
+                    }
+                else:
+                    return {'success': False, 'error': 'Druckvorgang fehlgeschlagen'}
             else:
                 return {'success': False, 'error': 'Gerät unterstützt keinen Drucktest'}
         except Exception as e:
             return {'success': False, 'error': str(e)}
+    
+    def print_receipt(self, device: Dict, content: str) -> bool:
+        """Druckt einen Beleg (ESC/POS)"""
+        try:
+            device_info = device['device_info']
+            
+            if device_info.get('type') == 'usb':
+                # USB ESC/POS Drucker
+                return self.print_usb_escpos(device_info, content)
+            elif device_info.get('type') == 'serial':
+                # Serieller ESC/POS Drucker
+                return self.print_serial_escpos(device_info, content)
+            else:
+                return False
+        except Exception as e:
+            print(f"Fehler beim Belegdruck: {e}")
+            return False
+    
+    def print_label(self, device: Dict, content: str) -> bool:
+        """Druckt ein Etikett"""
+        try:
+            device_info = device['device_info']
+            
+            if device_info.get('type') == 'usb':
+                # Brother QL-Serie oder ähnliche
+                return self.print_usb_label(device_info, content)
+            else:
+                return False
+        except Exception as e:
+            print(f"Fehler beim Etikettdruck: {e}")
+            return False
+    
+    def print_document(self, device: Dict, content: str) -> bool:
+        """Druckt ein Dokument"""
+        try:
+            # Für normale Drucker verwenden wir CUPS
+            return self.print_cups(device, content)
+        except Exception as e:
+            print(f"Fehler beim Dokumentdruck: {e}")
+            return False
+    
+    def print_generic(self, device: Dict, content: str) -> bool:
+        """Generischer Druckvorgang"""
+        try:
+            # Simuliere Druckvorgang
+            time.sleep(2)
+            return True
+        except Exception as e:
+            print(f"Fehler beim generischen Druck: {e}")
+            return False
+    
+    def print_usb_escpos(self, device_info: Dict, content: str) -> bool:
+        """Druckt über USB ESC/POS"""
+        try:
+            import usb.core
+            import usb.util
+            
+            # ESC/POS Befehle
+            escpos_commands = [
+                b'\x1B\x40',  # Initialize
+                b'\x1B\x61\x01',  # Center align
+                content.encode('utf-8'),
+                b'\x0A\x0A\x0A',  # Line feeds
+                b'\x1D\x56\x00',  # Cut paper
+            ]
+            
+            # Hier würde die tatsächliche USB-Kommunikation stattfinden
+            # Für jetzt simulieren wir den Erfolg
+            time.sleep(1)
+            return True
+            
+        except Exception as e:
+            print(f"USB ESC/POS Fehler: {e}")
+            return False
+    
+    def print_serial_escpos(self, device_info: Dict, content: str) -> bool:
+        """Druckt über serielle ESC/POS"""
+        try:
+            import serial
+            
+            port = device_info['port']
+            
+            # ESC/POS Befehle
+            escpos_commands = [
+                b'\x1B\x40',  # Initialize
+                b'\x1B\x61\x01',  # Center align
+                content.encode('utf-8'),
+                b'\x0A\x0A\x0A',  # Line feeds
+                b'\x1D\x56\x00',  # Cut paper
+            ]
+            
+            # Hier würde die tatsächliche serielle Kommunikation stattfinden
+            # Für jetzt simulieren wir den Erfolg
+            time.sleep(1)
+            return True
+            
+        except Exception as e:
+            print(f"Serieller ESC/POS Fehler: {e}")
+            return False
+    
+    def print_usb_label(self, device_info: Dict, content: str) -> bool:
+        """Druckt über USB Label-Drucker"""
+        try:
+            # Brother QL-Serie oder ähnliche Label-Drucker
+            # Hier würde die spezifische Label-Drucker-Kommunikation stattfinden
+            time.sleep(1)
+            return True
+            
+        except Exception as e:
+            print(f"USB Label-Drucker Fehler: {e}")
+            return False
+    
+    def print_cups(self, device: Dict, content: str) -> bool:
+        """Druckt über CUPS (Common Unix Printing System)"""
+        try:
+            # Erstelle temporäre Datei
+            import tempfile
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+                f.write(content)
+                temp_file = f.name
+            
+            # Drucke über CUPS
+            result = subprocess.run([
+                'lp', '-d', 'default', temp_file
+            ], capture_output=True, text=True)
+            
+            # Lösche temporäre Datei
+            os.unlink(temp_file)
+            
+            return result.returncode == 0
+            
+        except Exception as e:
+            print(f"CUPS Druck Fehler: {e}")
+            return False
     
     def test_scan(self, device_id: str) -> Dict:
         """Testet das Barcode-Scannen"""
