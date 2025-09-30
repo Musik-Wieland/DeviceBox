@@ -134,43 +134,69 @@ class DeviceBoxAutoUpdater:
             # Erstelle temporäres Verzeichnis für alte Installation
             old_install_dir = f"{self.install_dir}_old"
             if os.path.exists(old_install_dir):
-                shutil.rmtree(old_install_dir)
+                subprocess.run(['sudo', 'rm', '-rf', old_install_dir], check=True)
             
-            # Verschiebe aktuelle Installation
+            # Verschiebe aktuelle Installation mit sudo
             if os.path.exists(self.install_dir):
-                shutil.move(self.install_dir, old_install_dir)
+                print(f"Verschiebe aktuelle Installation nach: {old_install_dir}")
+                subprocess.run(['sudo', 'mv', self.install_dir, old_install_dir], check=True)
             
-            # Kopiere neue Version
-            shutil.copytree(extracted_dir, self.install_dir)
+            # Kopiere neue Version mit sudo
+            print(f"Kopiere neue Version nach: {self.install_dir}")
+            subprocess.run(['sudo', 'cp', '-r', extracted_dir, self.install_dir], check=True)
             
             # Stelle wichtige Dateien wieder her
             self.restore_data(old_install_dir)
             
             # Setze Berechtigungen
-            subprocess.run(['sudo', 'chown', '-R', 'pi:pi', self.install_dir], check=True)
-            subprocess.run(['sudo', 'chmod', '+x', os.path.join(self.install_dir, 'app.py')], check=True)
-            subprocess.run(['sudo', 'chmod', '+x', os.path.join(self.install_dir, 'update.py')], check=True)
-            subprocess.run(['sudo', 'chmod', '+x', os.path.join(self.install_dir, 'auto_update.py')], check=True)
+            service_user = os.getenv('SERVICE_USER', 'pi')
+            print(f"Setze Berechtigungen für Benutzer: {service_user}")
+            subprocess.run(['sudo', 'chown', '-R', f'{service_user}:{service_user}', self.install_dir], check=True)
+            
+            # Setze ausführbare Berechtigungen für alle Python-Skripte
+            executable_files = ['app.py', 'auto_update.py', 'update.py', 'update_simple.py', 'device_manager.py', 'debug_update.py', 'test_update.py']
+            for file in executable_files:
+                file_path = os.path.join(self.install_dir, file)
+                if os.path.exists(file_path):
+                    subprocess.run(['sudo', 'chmod', '+x', file_path], check=True)
             
             # Aktualisiere Version
             self.update_version_file()
             
             # Starte Service neu
             print("Starte DeviceBox Service neu...")
+            subprocess.run(['sudo', 'systemctl', 'daemon-reload'], check=True)
             subprocess.run(['sudo', 'systemctl', 'start', 'devicebox'], check=True)
             
-            # Entferne alte Installation nach erfolgreichem Start
-            shutil.rmtree(old_install_dir)
-            
-            print("Update erfolgreich installiert!")
-            return True
+            # Prüfe Service-Status
+            sleep(3)
+            result = subprocess.run(['sudo', 'systemctl', 'is-active', 'devicebox'], capture_output=True, text=True)
+            if result.returncode == 0 and 'active' in result.stdout:
+                print("Service läuft erfolgreich")
+                
+                # Entferne alte Installation nach erfolgreichem Start
+                print(f"Entferne alte Installation: {old_install_dir}")
+                subprocess.run(['sudo', 'rm', '-rf', old_install_dir], check=True)
+                
+                print("Update erfolgreich installiert!")
+                return True
+            else:
+                raise Exception("Service konnte nicht gestartet werden")
+                
         except Exception as e:
+            print(f"Fehler bei der Installation: {e}")
+            
             # Bei Fehler: Stelle alte Installation wieder her
-            if os.path.exists(old_install_dir):
-                if os.path.exists(self.install_dir):
-                    shutil.rmtree(self.install_dir)
-                shutil.move(old_install_dir, self.install_dir)
-                subprocess.run(['sudo', 'systemctl', 'start', 'devicebox'], check=False)
+            try:
+                if os.path.exists(old_install_dir):
+                    print("Stelle alte Installation wieder her...")
+                    if os.path.exists(self.install_dir):
+                        subprocess.run(['sudo', 'rm', '-rf', self.install_dir], check=True)
+                    subprocess.run(['sudo', 'mv', old_install_dir, self.install_dir], check=True)
+                    subprocess.run(['sudo', 'systemctl', 'start', 'devicebox'], check=False)
+                    print("Alte Installation wiederhergestellt")
+            except Exception as restore_error:
+                print(f"Fehler beim Wiederherstellen: {restore_error}")
             
             raise Exception(f"Fehler bei der Installation: {e}")
     
@@ -181,13 +207,21 @@ class DeviceBoxAutoUpdater:
             old_data_dir = os.path.join(old_install_dir, 'data')
             if os.path.exists(old_data_dir):
                 if os.path.exists(self.data_dir):
-                    shutil.rmtree(self.data_dir)
-                shutil.copytree(old_data_dir, self.data_dir)
+                    subprocess.run(['sudo', 'rm', '-rf', self.data_dir], check=True)
+                subprocess.run(['sudo', 'cp', '-r', old_data_dir, self.data_dir], check=True)
             
             # Stelle Konfigurationsdatei wieder her
             old_config = os.path.join(old_install_dir, 'config.json')
             if os.path.exists(old_config):
-                shutil.copy2(old_config, self.config_file)
+                subprocess.run(['sudo', 'cp', old_config, self.config_file], check=True)
+            
+            # Stelle virtuelle Umgebung wieder her falls vorhanden
+            old_venv = os.path.join(old_install_dir, 'venv')
+            if os.path.exists(old_venv):
+                new_venv = os.path.join(self.install_dir, 'venv')
+                if os.path.exists(new_venv):
+                    subprocess.run(['sudo', 'rm', '-rf', new_venv], check=True)
+                subprocess.run(['sudo', 'cp', '-r', old_venv, new_venv], check=True)
             
             print("Daten erfolgreich wiederhergestellt")
         except Exception as e:

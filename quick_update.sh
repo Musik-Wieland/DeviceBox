@@ -45,11 +45,16 @@ sudo chown -R "$SERVICE_USER:$SERVICE_USER" "$BACKUP_DIR"
 log "Führe Auto-Update aus..."
 cd "$INSTALL_DIR"
 
+# Setze Umgebungsvariablen für das Auto-Update-System
+export SERVICE_USER="$SERVICE_USER"
+export INSTALL_DIR="$INSTALL_DIR"
+
 if [ -f "venv/bin/activate" ]; then
     source venv/bin/activate
 fi
 
-if sudo -u "$SERVICE_USER" python3 auto_update.py; then
+# Führe Auto-Update mit sudo aus (da es sudo-Befehle verwendet)
+if sudo python3 auto_update.py; then
     success "Update erfolgreich!"
     
     # Service neu starten
