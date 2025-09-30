@@ -36,6 +36,12 @@ SERVICE_USER="${SERVICE_USER:-$(whoami)}"
 PORT="${PORT:-8080}"
 HOST="${HOST:-0.0.0.0}"
 
+# Debug: Zeige aktuelle Konfiguration
+log "Aktuelle Konfiguration:"
+log "  SERVICE_USER: $SERVICE_USER"
+log "  INSTALL_DIR: $INSTALL_DIR"
+log "  GITHUB_REPO: $GITHUB_REPO"
+
 # Prüfe ob als Root ausgeführt
 if [[ $EUID -eq 0 ]]; then
    error "Dieses Skript sollte nicht als Root ausgeführt werden!"
@@ -121,6 +127,17 @@ create_directories() {
     sudo mkdir -p "$INSTALL_DIR/logs"
     sudo mkdir -p "$INSTALL_DIR/backup"
     
+    # Debug: Prüfe ob SERVICE_USER korrekt gesetzt ist
+    log "Setze Berechtigungen für Benutzer: $SERVICE_USER"
+    
+    # Prüfe ob der Benutzer existiert
+    if ! id "$SERVICE_USER" &>/dev/null; then
+        error "Benutzer '$SERVICE_USER' existiert nicht!"
+        error "Verfügbare Benutzer:"
+        cut -d: -f1 /etc/passwd | grep -v "^root$" | head -10
+        exit 1
+    fi
+    
     # Setze Berechtigungen
     sudo chown -R "$SERVICE_USER:$SERVICE_USER" "$INSTALL_DIR"
     sudo chmod 755 "$INSTALL_DIR"
@@ -162,6 +179,11 @@ install_python_deps() {
     
     # Erstelle virtuelle Umgebung
     python3 -m venv venv
+    
+    # Setze Berechtigungen für virtuelle Umgebung
+    sudo chown -R "$SERVICE_USER:$SERVICE_USER" venv
+    
+    # Aktiviere virtuelle Umgebung
     source venv/bin/activate
     
     # Installiere Abhängigkeiten
