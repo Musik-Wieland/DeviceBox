@@ -45,7 +45,7 @@ class UpdateManager:
             # GitHub API für neueste Release
             api_url = "https://api.github.com/repos/Musik-Wieland/DeviceBox/releases/latest"
             
-            # Für private Repositories: GitHub Token verwenden
+            # Für öffentliche Repositories: Token optional
             headers = {}
             github_token = os.getenv('GITHUB_TOKEN')
             if github_token:
@@ -106,14 +106,14 @@ class UpdateManager:
             if os.path.exists(temp_dir):
                 shutil.rmtree(temp_dir)
             
-            # Repository klonen (mit Token für private Repos)
+            # Repository klonen (Token optional für öffentliche Repos)
             github_token = os.getenv('GITHUB_TOKEN')
             if github_token:
-                # Private Repository mit Token
+                # Mit Token (für höhere Rate Limits)
                 repo_url_with_token = self.repo_url.replace('https://', f'https://{github_token}@')
                 repo = Repo.clone_from(repo_url_with_token, temp_dir)
             else:
-                # Öffentliches Repository
+                # Öffentliches Repository ohne Token
                 repo = Repo.clone_from(self.repo_url, temp_dir)
             
             # Dateien kopieren (außer Konfigurationsdateien)

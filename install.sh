@@ -117,9 +117,9 @@ install_devicebox() {
     if command -v git &> /dev/null; then
         log "Klone Repository..."
         
-        # Check for GitHub token for private repositories
+        # Check for GitHub token (optional für öffentliche Repositories)
         if [[ -n "$GITHUB_TOKEN" ]]; then
-            log "Verwende GitHub Token für privates Repository..."
+            log "Verwende GitHub Token für höhere Rate Limits..."
             git clone https://${GITHUB_TOKEN}@github.com/Musik-Wieland/DeviceBox.git . || {
                 warning "Repository nicht verfügbar, verwende lokale Dateien..."
                 # Copy local files if git clone fails
@@ -129,6 +129,7 @@ install_devicebox() {
                 }
             }
         else
+            log "Klone öffentliches Repository..."
             git clone https://github.com/Musik-Wieland/DeviceBox.git . || {
                 warning "Repository nicht verfügbar, verwende lokale Dateien..."
                 # Copy local files if git clone fails
