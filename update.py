@@ -1,121 +1,248 @@
 #!/usr/bin/env python3
 """
-DeviceBox Update-System
-Führt Updates ohne Datenverlust durch
+DeviceBox Update System
+Einfaches Release-basiertes Update-System
 """
 
 import os
 import sys
 import json
-import shutil
 import requests
-import subprocess
 import tempfile
-from pathlib import Path
+import subprocess
+import shutil
+from datetime import datetime
 
 class DeviceBoxUpdater:
     def __init__(self):
-        self.github_repo = os.getenv('GITHUB_REPO', 'Musik-Wieland/DeviceBox')
-        self.app_name = os.getenv('APP_NAME', 'devicebox')
-        self.install_dir = os.getenv('INSTALL_DIR', '/opt/devicebox')
-        self.data_dir = os.getenv('DATA_DIR', '/opt/devicebox/data')
-        self.config_file = os.path.join(self.install_dir, 'config.json')
+        self.github_repo = "Musik-Wieland/DeviceBox"
+        self.install_dir = "/opt/devicebox"
+        self.version_file = os.path.join(self.install_dir, "version.json")
+        self.config_file = os.path.join(self.install_dir, "config.json")
+        self.data_dir = os.path.join(self.install_dir, "data")
         
+    def get_current_version(self):
+        """Holt die aktuelle Version"""
+        try:
+            if os.path.exists(self.version_file):
+                with open(self.version_file, 'r') as f:
+                    version_data = json.load(f)
+                    return version_data.get('version', '1.0.0')
+            return '1.0.0'
+        except Exception as e:
+            print(f"Fehler beim Lesen der Version: {e}")
+            return '1.0.0'
+    
     def get_latest_release(self):
         """Holt die neueste Release-Information von GitHub"""
         try:
+            # Versuche zuerst die API
             url = f"https://api.github.com/repos/{self.github_repo}/releases/latest"
-            response = requests.get(url, timeout=30)
+            headers = {
+                'User-Agent': 'DeviceBox-Updater/1.0',
+                'Accept': 'application/vnd.github.v3+json'
+            }
+            response = requests.get(url, headers=headers, timeout=10)
             
             if response.status_code == 200:
-                release_data = response.json()
-                
-                # Prüfe ob Assets vorhanden sind
-                if not release_data.get('assets') or len(release_data['assets']) == 0:
-                    raise Exception("Keine Release-Assets verfügbar. Verwende das Auto-Update-System stattdessen.")
-                
-                return release_data
+                return response.json()
             elif response.status_code == 404:
-                raise Exception("Keine Releases verfügbar. Verwende das Auto-Update-System stattdessen.")
+                print("Keine Releases verfügbar")
+                return None
+            elif response.status_code == 403:
+                print("GitHub API Rate Limit erreicht - verwende Fallback")
+                return self.get_latest_release_fallback()
             else:
-                raise Exception(f"GitHub API Fehler: {response.status_code}")
+                print(f"GitHub API Fehler: {response.status_code}")
+                return self.get_latest_release_fallback()
+                
         except Exception as e:
-            raise Exception(f"Fehler beim Abrufen der Release-Informationen: {e}")
+            print(f"Fehler beim Abrufen der Release-Informationen: {e}")
+            return self.get_latest_release_fallback()
+    
+    def get_latest_release_fallback(self):
+        """Fallback-Methode ohne GitHub API"""
+        try:
+            # Versuche die Releases-Seite direkt zu parsen
+            url = f"https://github.com/{self.github_repo}/releases/latest"
+            headers = {
+                'User-Agent': 'DeviceBox-Updater/1.0'
+            }
+            response = requests.get(url, headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                # Einfache Version aus der URL extrahieren
+                # Die URL ist normalerweise: https://github.com/user/repo/releases/tag/v1.0.0
+                import re
+                version_match = re.search(r'/releases/tag/v?([0-9.]+)', response.url)
+                if version_match:
+                    version = version_match.group(1)
+                    return {
+                        'tag_name': f'v{version}',
+                        'name': f'Release {version}',
+                        'assets': [{
+                            'browser_download_url': f'https://github.com/{self.github_repo}/archive/refs/tags/v{version}.zip'
+                        }]
+                    }
+            
+            print("Keine Releases über Fallback-Methode gefunden")
+            return None
+            
+        except Exception as e:
+            print(f"Fallback-Methode fehlgeschlagen: {e}")
+            return None
+    
+    def check_for_updates(self):
+        """Prüft auf verfügbare Updates"""
+        try:
+            print("Prüfe auf Updates...")
+            
+            # Aktuelle Version
+            current_version = self.get_current_version()
+            print(f"Aktuelle Version: {current_version}")
+            
+            # Neueste Release
+            latest_release = self.get_latest_release()
+            if not latest_release:
+                return {
+                    'update_available': False,
+                    'current_version': current_version,
+                    'latest_version': current_version,
+                    'message': 'Keine Releases verfügbar'
+                }
+            
+            latest_version = latest_release['tag_name'].lstrip('v')
+            print(f"Neueste Version: {latest_version}")
+            
+            # Version vergleichen
+            if self.compare_versions(current_version, latest_version) < 0:
+                return {
+                    'update_available': True,
+                    'current_version': current_version,
+                    'latest_version': latest_version,
+                    'release_info': latest_release,
+                    'message': f'Update verfügbar: {current_version} → {latest_version}'
+                }
+            else:
+                return {
+                    'update_available': False,
+                    'current_version': current_version,
+                    'latest_version': latest_version,
+                    'message': 'System ist bereits aktuell'
+                }
+                
+        except Exception as e:
+            print(f"Fehler beim Update-Check: {e}")
+            return {
+                'update_available': False,
+                'current_version': self.get_current_version(),
+                'latest_version': self.get_current_version(),
+                'message': f'Fehler beim Update-Check: {e}'
+            }
+    
+    def compare_versions(self, version1, version2):
+        """Vergleicht zwei Versionen (semantic versioning)"""
+        def version_tuple(v):
+            return tuple(map(int, v.split('.')))
+        
+        try:
+            v1 = version_tuple(version1)
+            v2 = version_tuple(version2)
+            if v1 < v2:
+                return -1
+            elif v1 > v2:
+                return 1
+            else:
+                return 0
+        except:
+            # Fallback: String-Vergleich
+            if version1 < version2:
+                return -1
+            elif version1 > version2:
+                return 1
+            else:
+                return 0
     
     def download_release(self, download_url, temp_dir):
-        """Lädt die neueste Version herunter"""
+        """Lädt das Release herunter"""
         try:
-            print(f"Lade Update von {download_url} herunter...")
-            response = requests.get(download_url, timeout=300, stream=True)
+            print(f"Lade Update herunter: {download_url}")
+            response = requests.get(download_url, timeout=60)
             response.raise_for_status()
             
-            # Bestimme Dateiname aus URL oder Content-Disposition
-            filename = download_url.split('/')[-1]
-            if not filename.endswith('.zip'):
-                filename = f"{self.app_name}-update.zip"
+            zip_path = os.path.join(temp_dir, "update.zip")
+            with open(zip_path, 'wb') as f:
+                f.write(response.content)
             
-            filepath = os.path.join(temp_dir, filename)
+            print(f"Update heruntergeladen: {zip_path}")
+            return zip_path
             
-            with open(filepath, 'wb') as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    f.write(chunk)
-            
-            print(f"Update heruntergeladen: {filepath}")
-            return filepath
         except Exception as e:
-            raise Exception(f"Fehler beim Herunterladen: {e}")
+            print(f"Fehler beim Herunterladen: {e}")
+            raise
+    
+    def extract_update(self, zip_path, temp_dir):
+        """Extrahiert das Update"""
+        try:
+            import zipfile
+            
+            extracted_dir = os.path.join(temp_dir, "extracted")
+            os.makedirs(extracted_dir, exist_ok=True)
+            
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall(extracted_dir)
+            
+            # Finde das Hauptverzeichnis
+            contents = os.listdir(extracted_dir)
+            if len(contents) == 1 and os.path.isdir(os.path.join(extracted_dir, contents[0])):
+                extracted_dir = os.path.join(extracted_dir, contents[0])
+            
+            print(f"Update extrahiert nach: {extracted_dir}")
+            return extracted_dir
+            
+        except Exception as e:
+            print(f"Fehler beim Extrahieren: {e}")
+            raise
     
     def backup_data(self):
         """Erstellt ein Backup der wichtigen Daten"""
         try:
-            backup_dir = os.path.join(self.install_dir, 'backup')
+            backup_dir = f"{self.install_dir}_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            print(f"Erstelle Backup: {backup_dir}")
+            
+            # Erstelle Backup-Verzeichnis
             os.makedirs(backup_dir, exist_ok=True)
             
-            # Backup-Zeitstempel
-            timestamp = subprocess.check_output(['date', '+%Y%m%d_%H%M%S']).decode().strip()
-            backup_path = os.path.join(backup_dir, f'backup_{timestamp}')
+            # Backup wichtige Dateien
+            if os.path.exists(self.data_dir):
+                shutil.copytree(self.data_dir, os.path.join(backup_dir, "data"))
             
-            # Wichtige Dateien und Verzeichnisse sichern
-            items_to_backup = [
-                self.data_dir,
-                self.config_file,
-                '/etc/systemd/system/devicebox.service'  # Systemd-Service
-            ]
+            if os.path.exists(self.config_file):
+                shutil.copy2(self.config_file, backup_dir)
             
-            for item in items_to_backup:
-                if os.path.exists(item):
-                    if os.path.isdir(item):
-                        shutil.copytree(item, os.path.join(backup_path, os.path.basename(item)))
-                    else:
-                        shutil.copy2(item, backup_path)
+            if os.path.exists(self.version_file):
+                shutil.copy2(self.version_file, backup_dir)
             
-            print(f"Backup erstellt: {backup_path}")
-            return backup_path
+            print("Backup erfolgreich erstellt")
+            return backup_dir
+            
         except Exception as e:
-            raise Exception(f"Fehler beim Erstellen des Backups: {e}")
-    
-    def extract_update(self, zip_path, temp_dir):
-        """Extrahiert das Update-Archiv"""
-        try:
-            import zipfile
-            
-            extract_dir = os.path.join(temp_dir, 'extracted')
-            os.makedirs(extract_dir, exist_ok=True)
-            
-            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                zip_ref.extractall(extract_dir)
-            
-            print(f"Update extrahiert nach: {extract_dir}")
-            return extract_dir
-        except Exception as e:
-            raise Exception(f"Fehler beim Extrahieren: {e}")
+            print(f"Warnung beim Backup: {e}")
+            return None
     
     def install_update(self, extracted_dir):
         """Installiert das Update"""
+        old_install_dir = None
         try:
-            # Stoppe den Service
-            print("Stoppe DeviceBox Service...")
-            subprocess.run(['sudo', 'systemctl', 'stop', 'devicebox'], check=True)
+            print("Installiere Update...")
+            
+            # Prüfe ob wir auf einem Raspberry Pi sind (systemctl verfügbar)
+            is_raspberry_pi = os.path.exists('/etc/os-release') and 'raspbian' in open('/etc/os-release').read().lower()
+            
+            if is_raspberry_pi:
+                # Stoppe den Service nur auf Raspberry Pi
+                print("Stoppe DeviceBox Service...")
+                subprocess.run(['sudo', 'systemctl', 'stop', 'devicebox'], check=True)
             
             # Erstelle temporäres Verzeichnis für alte Installation
             old_install_dir = f"{self.install_dir}_old"
@@ -124,34 +251,71 @@ class DeviceBoxUpdater:
             
             # Verschiebe aktuelle Installation
             if os.path.exists(self.install_dir):
+                print(f"Verschiebe aktuelle Installation nach: {old_install_dir}")
                 shutil.move(self.install_dir, old_install_dir)
             
             # Kopiere neue Version
+            print(f"Kopiere neue Version nach: {self.install_dir}")
             shutil.copytree(extracted_dir, self.install_dir)
             
             # Stelle wichtige Dateien wieder her
             self.restore_data(old_install_dir)
             
-            # Setze Berechtigungen
-            subprocess.run(['sudo', 'chown', '-R', 'pi:pi', self.install_dir], check=True)
-            subprocess.run(['sudo', 'chmod', '+x', os.path.join(self.install_dir, 'app.py')], check=True)
+            # Setze Berechtigungen nur auf Raspberry Pi
+            if is_raspberry_pi:
+                service_user = os.getenv('SERVICE_USER', 'pi')
+                print(f"Setze Berechtigungen für Benutzer: {service_user}")
+                subprocess.run(['sudo', 'chown', '-R', f'{service_user}:{service_user}', self.install_dir], check=True)
+                
+                # Setze ausführbare Berechtigungen
+                executable_files = ['app.py', 'update.py', 'device_manager.py']
+                for file in executable_files:
+                    file_path = os.path.join(self.install_dir, file)
+                    if os.path.exists(file_path):
+                        subprocess.run(['sudo', 'chmod', '+x', file_path], check=True)
             
-            # Starte Service neu
-            print("Starte DeviceBox Service neu...")
-            subprocess.run(['sudo', 'systemctl', 'start', 'devicebox'], check=True)
+            # Aktualisiere Version
+            self.update_version_file()
             
-            # Entferne alte Installation nach erfolgreichem Start
-            shutil.rmtree(old_install_dir)
+            if is_raspberry_pi:
+                # Starte Service neu nur auf Raspberry Pi
+                print("Starte DeviceBox Service neu...")
+                subprocess.run(['sudo', 'systemctl', 'daemon-reload'], check=True)
+                subprocess.run(['sudo', 'systemctl', 'start', 'devicebox'], check=True)
+                
+                # Prüfe Service-Status
+                import time
+                time.sleep(3)
+                result = subprocess.run(['sudo', 'systemctl', 'is-active', 'devicebox'], capture_output=True, text=True)
+                if result.returncode == 0 and 'active' in result.stdout:
+                    print("Service läuft erfolgreich")
+                else:
+                    raise Exception("Service konnte nicht gestartet werden")
+            
+            # Entferne alte Installation nach erfolgreichem Update
+            if old_install_dir and os.path.exists(old_install_dir):
+                print(f"Entferne alte Installation: {old_install_dir}")
+                shutil.rmtree(old_install_dir)
             
             print("Update erfolgreich installiert!")
             return True
+                
         except Exception as e:
+            print(f"Fehler bei der Installation: {e}")
+            
             # Bei Fehler: Stelle alte Installation wieder her
-            if os.path.exists(old_install_dir):
-                if os.path.exists(self.install_dir):
-                    shutil.rmtree(self.install_dir)
-                shutil.move(old_install_dir, self.install_dir)
-                subprocess.run(['sudo', 'systemctl', 'start', 'devicebox'], check=False)
+            try:
+                if old_install_dir and os.path.exists(old_install_dir):
+                    print("Stelle alte Installation wieder her...")
+                    if os.path.exists(self.install_dir):
+                        shutil.rmtree(self.install_dir)
+                    shutil.move(old_install_dir, self.install_dir)
+                    
+                    if is_raspberry_pi:
+                        subprocess.run(['sudo', 'systemctl', 'start', 'devicebox'], check=False)
+                    print("Alte Installation wiederhergestellt")
+            except Exception as restore_error:
+                print(f"Fehler beim Wiederherstellen: {restore_error}")
             
             raise Exception(f"Fehler bei der Installation: {e}")
     
@@ -170,17 +334,49 @@ class DeviceBoxUpdater:
             if os.path.exists(old_config):
                 shutil.copy2(old_config, self.config_file)
             
+            # Stelle virtuelle Umgebung wieder her falls vorhanden
+            old_venv = os.path.join(old_install_dir, 'venv')
+            if os.path.exists(old_venv):
+                new_venv = os.path.join(self.install_dir, 'venv')
+                if os.path.exists(new_venv):
+                    shutil.rmtree(new_venv)
+                shutil.copytree(old_venv, new_venv)
+            
             print("Daten erfolgreich wiederhergestellt")
         except Exception as e:
             print(f"Warnung beim Wiederherstellen der Daten: {e}")
+    
+    def update_version_file(self):
+        """Aktualisiert die Versionsdatei"""
+        try:
+            version_data = {
+                'version': '1.0.0',  # Wird durch das Release überschrieben
+                'updated_at': datetime.now().isoformat(),
+                'update_method': 'release'
+            }
+            
+            with open(self.version_file, 'w') as f:
+                json.dump(version_data, f, indent=2)
+            
+            print("Versionsdatei aktualisiert")
+        except Exception as e:
+            print(f"Fehler beim Aktualisieren der Versionsdatei: {e}")
     
     def update(self):
         """Führt das komplette Update durch"""
         try:
             print("DeviceBox Update gestartet...")
             
+            # Prüfe auf Updates
+            update_info = self.check_for_updates()
+            if not update_info['update_available']:
+                print(update_info['message'])
+                return True
+            
+            print(f"Update verfügbar: {update_info['message']}")
+            
             # Hole Release-Informationen
-            release_info = self.get_latest_release()
+            release_info = update_info['release_info']
             
             # Prüfe ob Assets vorhanden sind
             if not release_info.get('assets') or len(release_info['assets']) == 0:
@@ -207,32 +403,32 @@ class DeviceBoxUpdater:
             
         except Exception as e:
             print(f"Update fehlgeschlagen: {e}")
-            
-            # Wenn Release-basiertes Update fehlschlägt, versuche Auto-Update
-            if "Keine Release" in str(e) or "404" in str(e):
-                print("\nVersuche Auto-Update-System...")
-                try:
-                    auto_update_script = os.path.join(self.install_dir, 'auto_update.py')
-                    if os.path.exists(auto_update_script):
-                        result = subprocess.run([sys.executable, auto_update_script], 
-                                              capture_output=True, text=True, timeout=300)
-                        if result.returncode == 0:
-                            print("Auto-Update erfolgreich!")
-                            return True
-                        else:
-                            print(f"Auto-Update fehlgeschlagen: {result.stderr}")
-                    else:
-                        print("Auto-Update-Skript nicht gefunden")
-                except Exception as auto_e:
-                    print(f"Auto-Update fehlgeschlagen: {auto_e}")
-            
             return False
 
 def main():
-    """Hauptfunktion für Update-Skript"""
-    updater = DeviceBoxUpdater()
-    success = updater.update()
-    sys.exit(0 if success else 1)
+    """Hauptfunktion"""
+    if len(sys.argv) > 1:
+        command = sys.argv[1]
+        
+        updater = DeviceBoxUpdater()
+        
+        if command == "check":
+            # Nur prüfen
+            update_info = updater.check_for_updates()
+            print(json.dumps(update_info, indent=2))
+            
+        elif command == "update":
+            # Update durchführen
+            success = updater.update()
+            sys.exit(0 if success else 1)
+            
+        else:
+            print("Unbekannter Befehl. Verfügbare Befehle: check, update")
+            sys.exit(1)
+    else:
+        print("DeviceBox Update System")
+        print("Verwendung: python3 update.py [check|update]")
+        sys.exit(1)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

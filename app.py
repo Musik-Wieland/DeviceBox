@@ -78,13 +78,13 @@ class DeviceBoxApp:
             return None
     
     def check_for_updates(self):
-        """Prüft auf verfügbare Updates mit Auto-Update-System"""
+        """Prüft auf verfügbare Updates mit Release-System"""
         try:
-            # Verwende das neue Auto-Update-System
+            # Verwende das neue Release-basierte Update-System
             import subprocess
             result = subprocess.run([
                 sys.executable, 
-                os.path.join(os.path.dirname(__file__), 'auto_update.py'), 
+                os.path.join(os.path.dirname(__file__), 'update.py'), 
                 'check'
             ], capture_output=True, text=True, timeout=30)
             
@@ -93,22 +93,24 @@ class DeviceBoxApp:
                 update_info = json.loads(result.stdout)
                 return update_info
             else:
-                return {'error': f'Auto-Update-Check fehlgeschlagen: {result.stderr}'}
+                return {'error': f'Update-Check fehlgeschlagen: {result.stderr}'}
         except Exception as e:
             return {'error': str(e)}
     
     def perform_update(self):
-        """Führt das Update mit Auto-Update-System durch"""
+        """Führt das Update mit Release-System durch"""
         if self.update_in_progress:
             return {'error': 'Update bereits in Bearbeitung'}
         
         self.update_in_progress = True
         
         try:
-            # Auto-Update-Skript ausführen
-            auto_update_script = os.path.join(os.path.dirname(__file__), 'auto_update.py')
-            if os.path.exists(auto_update_script):
-                result = subprocess.run([sys.executable, auto_update_script], 
+            # Verwende das neue Release-basierte Update-System
+            update_script = os.path.join(os.path.dirname(__file__), 'update.py')
+            
+            if os.path.exists(update_script):
+                # Führe das Skript mit sudo aus, da es systemctl-Befehle verwendet
+                result = subprocess.run(['sudo', sys.executable, update_script, 'update'], 
                                       capture_output=True, text=True, timeout=300)
                 
                 # Logge die Ausgabe für Debugging
@@ -118,15 +120,15 @@ class DeviceBoxApp:
                 
                 if result.returncode == 0:
                     # Prüfe ob wirklich ein Update durchgeführt wurde
-                    if "Kein Update verfügbar" in result.stdout:
+                    if "System ist bereits aktuell" in result.stdout:
                         return {'success': True, 'message': 'System ist bereits aktuell'}
                     else:
-                        return {'success': True, 'message': 'Auto-Update erfolgreich abgeschlossen'}
+                        return {'success': True, 'message': 'Update erfolgreich abgeschlossen'}
                 else:
                     error_msg = result.stderr if result.stderr else result.stdout
-                    return {'error': f'Auto-Update fehlgeschlagen: {error_msg}'}
+                    return {'error': f'Update fehlgeschlagen: {error_msg}'}
             else:
-                return {'error': 'Auto-Update-Skript nicht gefunden'}
+                return {'error': 'Update-Skript nicht gefunden'}
         except subprocess.TimeoutExpired:
             return {'error': 'Update-Timeout: Das Update dauerte zu lange'}
         except Exception as e:

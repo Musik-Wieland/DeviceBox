@@ -169,8 +169,8 @@ perform_update() {
     fi
     
     # Führe Auto-Update-Skript aus
-    if [ -f "auto_update.py" ]; then
-        sudo -u "$SERVICE_USER" python3 auto_update.py
+    if [ -f "update.py" ]; then
+        sudo -u "$SERVICE_USER" python3 update.py check
         UPDATE_SUCCESS=$?
         
         if [ $UPDATE_SUCCESS -eq 0 ]; then
@@ -275,14 +275,7 @@ download_app() {
     sudo chown -R "$SERVICE_USER:$SERVICE_USER" "$INSTALL_DIR"
 sudo chmod +x "$INSTALL_DIR/app.py"
 sudo chmod +x "$INSTALL_DIR/update.py"
-sudo chmod +x "$INSTALL_DIR/update_simple.py"
-sudo chmod +x "$INSTALL_DIR/update_curl.sh"
-sudo chmod +x "$INSTALL_DIR/fix_update.sh"
-sudo chmod +x "$INSTALL_DIR/fix_update.py"
-sudo chmod +x "$INSTALL_DIR/auto_update.py"
 sudo chmod +x "$INSTALL_DIR/device_manager.py"
-sudo chmod +x "$INSTALL_DIR/debug_update.py"
-sudo chmod +x "$INSTALL_DIR/test_update.py"
     
     # Aufräumen
     cd /
@@ -529,8 +522,8 @@ main() {
         log "  sudo journalctl -u devicebox -f     # Logs anzeigen"
         log ""
         log "Update-Befehle:"
-        log "  python3 $INSTALL_DIR/auto_update.py # Auto-Update durchführen"
-        log "  python3 $INSTALL_DIR/debug_update.py # Debug-Informationen"
+        log "  python3 $INSTALL_DIR/update.py check # Update-Check"
+        log "  python3 $INSTALL_DIR/update.py update # Update durchführen"
         
     else
         log "=== DeviceBox Installation ==="
@@ -556,8 +549,8 @@ main() {
         log "  sudo journalctl -u devicebox -f     # Logs anzeigen"
         log ""
         log "Update-Befehle:"
-        log "  python3 $INSTALL_DIR/auto_update.py # Auto-Update durchführen"
-        log "  python3 $INSTALL_DIR/debug_update.py # Debug-Informationen"
+        log "  python3 $INSTALL_DIR/update.py check # Update-Check"
+        log "  python3 $INSTALL_DIR/update.py update # Update durchführen"
     fi
 }
 

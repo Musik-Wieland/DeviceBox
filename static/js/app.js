@@ -271,7 +271,7 @@ class DeviceBoxApp {
         
         if (!container) return;
         
-        if (data.available) {
+        if (data.update_available) {
             container.innerHTML = `
                 <div class="update-available">
                     <i class="fas fa-download"></i>
@@ -279,7 +279,7 @@ class DeviceBoxApp {
                         <h4>Update verfügbar!</h4>
                         <p>Aktuelle Version: <strong>${data.current_version}</strong></p>
                         <p>Neue Version: <strong>${data.latest_version}</strong></p>
-                        ${data.release_notes ? `<p class="release-notes">${data.release_notes}</p>` : ''}
+                        <p class="update-message">${data.message}</p>
                     </div>
                 </div>
             `;
@@ -294,7 +294,7 @@ class DeviceBoxApp {
                     <div class="update-details">
                         <h4>System ist aktuell</h4>
                         <p>Version: <strong>${data.current_version}</strong></p>
-                        <p>Keine Updates verfügbar</p>
+                        <p class="update-message">${data.message}</p>
                     </div>
                 </div>
             `;
