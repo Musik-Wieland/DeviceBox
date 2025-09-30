@@ -20,12 +20,18 @@ Ein modernes, Apple-inspiriertes Management-System für Raspberry Pi mit automat
 curl -fsSL https://raw.githubusercontent.com/Musik-Wieland/DeviceBox/main/install.sh | bash
 ```
 
+### Automatisches Update (ohne Nachfrage)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Musik-Wieland/DeviceBox/main/install.sh | bash -s -- --force-update
+```
+
 ### Manuelle Installation
 
 1. Repository klonen:
 ```bash
 git clone https://github.com/Musik-Wieland/DeviceBox.git
-cd devicebox
+cd DeviceBox
 ```
 
 2. Installationsskript ausführen:
@@ -33,6 +39,53 @@ cd devicebox
 chmod +x install.sh
 ./install.sh
 ```
+
+### Installationsoptionen
+
+```bash
+# Hilfe anzeigen
+./install.sh --help
+
+# Automatisches Update ohne Nachfrage
+./install.sh --force-update
+
+# Mit Umgebungsvariablen
+GITHUB_REPO=Musik-Wieland/DeviceBox SERVICE_USER=musikwieland ./install.sh
+```
+
+## Updates
+
+### Automatische Updates
+
+DeviceBox führt automatisch Updates durch, wenn:
+- Das Installationsskript erneut ausgeführt wird
+- Ein Update über die Web-Oberfläche angefordert wird
+- Das Auto-Update-System aktiviert ist
+
+### Update-Modi
+
+**Interaktives Update:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/Musik-Wieland/DeviceBox/main/install.sh | bash
+```
+
+**Automatisches Update:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/Musik-Wieland/DeviceBox/main/install.sh | bash -s -- --force-update
+```
+
+**Manuelles Update:**
+```bash
+sudo python3 /opt/devicebox/auto_update.py
+```
+
+### Update-Features
+
+- ✅ **Backup-System** - Automatische Sicherung vor Updates
+- ✅ **Rollback-Funktion** - Rückkehr zum vorherigen Stand bei Fehlern
+- ✅ **Datenverlust-Schutz** - Konfigurationen und Daten bleiben erhalten
+- ✅ **Service-Management** - Automatisches Stoppen/Starten des Services
+- ✅ **Fehlerbehandlung** - Robuste Behandlung von Update-Fehlern
 
 ## Deinstallation
 

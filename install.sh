@@ -36,11 +36,57 @@ SERVICE_USER="${SERVICE_USER:-$(whoami)}"
 PORT="${PORT:-8080}"
 HOST="${HOST:-0.0.0.0}"
 
+# Prüfe ob DeviceBox bereits installiert ist
+EXISTING_INSTALLATION=false
+if [ -d "$INSTALL_DIR" ] && [ -f "$INSTALL_DIR/app.py" ]; then
+    EXISTING_INSTALLATION=true
+fi
+
+# Prüfe auf Flags
+FORCE_UPDATE=false
+SHOW_HELP=false
+
+for arg in "$@"; do
+    case $arg in
+        --force-update)
+            FORCE_UPDATE=true
+            ;;
+        --help|-h)
+            SHOW_HELP=true
+            ;;
+    esac
+done
+
+# Zeige Hilfe
+if [ "$SHOW_HELP" = true ]; then
+    echo "DeviceBox Installationsskript"
+    echo ""
+    echo "Verwendung:"
+    echo "  $0                    # Normale Installation/Update"
+    echo "  $0 --force-update     # Automatisches Update ohne Nachfrage"
+    echo "  $0 --help             # Diese Hilfe anzeigen"
+    echo ""
+    echo "Umgebungsvariablen:"
+    echo "  GITHUB_REPO           # GitHub Repository (Standard: Musik-Wieland/DeviceBox)"
+    echo "  APP_NAME              # Anwendungsname (Standard: devicebox)"
+    echo "  INSTALL_DIR           # Installationsverzeichnis (Standard: /opt/devicebox)"
+    echo "  SERVICE_USER          # Service-Benutzer (Standard: aktueller Benutzer)"
+    echo "  PORT                  # Port (Standard: 8080)"
+    echo "  HOST                  # Host (Standard: 0.0.0.0)"
+    echo ""
+    echo "Beispiele:"
+    echo "  curl -fsSL https://raw.githubusercontent.com/Musik-Wieland/DeviceBox/main/install.sh | bash"
+    echo "  curl -fsSL https://raw.githubusercontent.com/Musik-Wieland/DeviceBox/main/install.sh | bash -s -- --force-update"
+    exit 0
+fi
+
 # Debug: Zeige aktuelle Konfiguration
 log "Aktuelle Konfiguration:"
 log "  SERVICE_USER: $SERVICE_USER"
 log "  INSTALL_DIR: $INSTALL_DIR"
 log "  GITHUB_REPO: $GITHUB_REPO"
+log "  Bestehende Installation: $EXISTING_INSTALLATION"
+log "  Force-Update: $FORCE_UPDATE"
 
 # Prüfe ob als Root ausgeführt
 if [[ $EUID -eq 0 ]]; then
@@ -97,6 +143,72 @@ check_system() {
     fi
     
     success "System-Anforderungen erfüllt"
+}
+
+# Update-Funktion für bestehende Installationen
+perform_update() {
+    log "Führe Update für bestehende Installation durch..."
+    
+    # Stoppe den Service
+    log "Stoppe DeviceBox Service..."
+    sudo systemctl stop "$APP_NAME" 2>/dev/null || true
+    
+    # Erstelle Backup der aktuellen Installation
+    BACKUP_DIR="/opt/devicebox-backup-$(date +%Y%m%d-%H%M%S)"
+    log "Erstelle Backup in: $BACKUP_DIR"
+    sudo cp -r "$INSTALL_DIR" "$BACKUP_DIR"
+    sudo chown -R "$SERVICE_USER:$SERVICE_USER" "$BACKUP_DIR"
+    
+    # Führe Auto-Update aus
+    log "Führe Auto-Update aus..."
+    cd "$INSTALL_DIR"
+    
+    # Aktiviere virtuelle Umgebung falls vorhanden
+    if [ -f "venv/bin/activate" ]; then
+        source venv/bin/activate
+    fi
+    
+    # Führe Auto-Update-Skript aus
+    if [ -f "auto_update.py" ]; then
+        sudo -u "$SERVICE_USER" python3 auto_update.py
+        UPDATE_SUCCESS=$?
+        
+        if [ $UPDATE_SUCCESS -eq 0 ]; then
+            success "Update erfolgreich abgeschlossen"
+        else
+            warning "Update fehlgeschlagen, verwende Backup..."
+            sudo rm -rf "$INSTALL_DIR"
+            sudo mv "$BACKUP_DIR" "$INSTALL_DIR"
+            sudo chown -R "$SERVICE_USER:$SERVICE_USER" "$INSTALL_DIR"
+            error "Update fehlgeschlagen, Installation auf vorherigen Stand zurückgesetzt"
+            return 1
+        fi
+    else
+        error "Auto-Update-Skript nicht gefunden"
+        return 1
+    fi
+    
+    # Starte den Service neu
+    log "Starte DeviceBox Service neu..."
+    sudo systemctl daemon-reload
+    sudo systemctl enable "$APP_NAME"
+    sudo systemctl start "$APP_NAME"
+    
+    # Prüfe Service-Status
+    sleep 3
+    if sudo systemctl is-active --quiet "$APP_NAME"; then
+        success "DeviceBox Service läuft erfolgreich"
+    else
+        error "DeviceBox Service konnte nicht gestartet werden"
+        sudo systemctl status "$APP_NAME"
+        return 1
+    fi
+    
+    # Lösche Backup nach erfolgreichem Update
+    sudo rm -rf "$BACKUP_DIR"
+    
+    success "Update abgeschlossen!"
+    return 0
 }
 
 # Installiere Abhängigkeiten
@@ -339,32 +451,72 @@ start_service() {
 
 # Hauptinstallation
 main() {
-    log "=== DeviceBox Installation ==="
-    
-    check_system
-    install_dependencies
-    create_directories
-    download_app
-    install_python_deps
-    create_systemd_service
-    configure_firewall
-    configure_nginx
-    start_service
-    
-    success "=== Installation abgeschlossen! ==="
-    log ""
-    log "DeviceBox läuft jetzt auf diesem Raspberry Pi"
-    log "Die Anwendung startet automatisch nach jedem Neustart"
-    log ""
-    log "Nützliche Befehle:"
-    log "  sudo systemctl status devicebox    # Service-Status"
-    log "  sudo systemctl restart devicebox    # Service neu starten"
-    log "  sudo journalctl -u devicebox -f     # Logs anzeigen"
-    log ""
-    log "Update-Befehle:"
-    log "  sudo systemctl stop devicebox       # Service stoppen"
-    log "  python3 $INSTALL_DIR/update.py      # Update durchführen"
-    log "  sudo systemctl start devicebox       # Service starten"
+    if [ "$EXISTING_INSTALLATION" = true ]; then
+        log "=== DeviceBox Update ==="
+        log "Bestehende Installation gefunden in: $INSTALL_DIR"
+        log ""
+        
+        # Frage den Benutzer nach Bestätigung (außer bei --force-update)
+        if [ "$FORCE_UPDATE" = false ]; then
+            warning "DeviceBox ist bereits installiert!"
+            warning "Dies wird ein Update der bestehenden Installation durchführen."
+            echo ""
+            echo "Möchten Sie fortfahren? (y/N)"
+            read -r response
+            
+            if [[ ! "$response" =~ ^[Yy]$ ]]; then
+                log "Update abgebrochen."
+                exit 0
+            fi
+        else
+            log "Force-Update aktiviert - Update ohne Bestätigung"
+        fi
+        
+        # Führe Update durch
+        check_system
+        perform_update
+        
+        success "=== Update abgeschlossen! ==="
+        log ""
+        log "DeviceBox wurde erfolgreich aktualisiert"
+        log "Die Anwendung läuft weiterhin automatisch nach jedem Neustart"
+        log ""
+        log "Nützliche Befehle:"
+        log "  sudo systemctl status devicebox    # Service-Status"
+        log "  sudo systemctl restart devicebox    # Service neu starten"
+        log "  sudo journalctl -u devicebox -f     # Logs anzeigen"
+        log ""
+        log "Update-Befehle:"
+        log "  python3 $INSTALL_DIR/auto_update.py # Auto-Update durchführen"
+        log "  python3 $INSTALL_DIR/debug_update.py # Debug-Informationen"
+        
+    else
+        log "=== DeviceBox Installation ==="
+        
+        check_system
+        install_dependencies
+        create_directories
+        download_app
+        install_python_deps
+        create_systemd_service
+        configure_firewall
+        configure_nginx
+        start_service
+        
+        success "=== Installation abgeschlossen! ==="
+        log ""
+        log "DeviceBox läuft jetzt auf diesem Raspberry Pi"
+        log "Die Anwendung startet automatisch nach jedem Neustart"
+        log ""
+        log "Nützliche Befehle:"
+        log "  sudo systemctl status devicebox    # Service-Status"
+        log "  sudo systemctl restart devicebox    # Service neu starten"
+        log "  sudo journalctl -u devicebox -f     # Logs anzeigen"
+        log ""
+        log "Update-Befehle:"
+        log "  python3 $INSTALL_DIR/auto_update.py # Auto-Update durchführen"
+        log "  python3 $INSTALL_DIR/debug_update.py # Debug-Informationen"
+    fi
 }
 
 # Führe Installation aus
