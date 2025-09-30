@@ -9,6 +9,9 @@ psutil>=5.9.0
 # HTTP Requests
 requests>=2.31.0
 
+# Version Management
+packaging>=23.1
+
 # Date/Time Handling
 python-dateutil>=2.8.0
 

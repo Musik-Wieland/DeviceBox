@@ -78,32 +78,21 @@ class DeviceBoxApp:
             return None
     
     def check_for_updates(self):
-        """Prüft auf verfügbare Updates mit Release-System"""
+        """Prüft auf verfügbare Updates mit professionellem Update-System"""
         try:
-            # Verwende das neue Release-basierte Update-System
+            # Verwende das neue professionelle Update-System
             import subprocess
             result = subprocess.run([
                 sys.executable, 
-                os.path.join(os.path.dirname(__file__), 'update.py'), 
+                os.path.join(os.path.dirname(__file__), 'update_system.py'), 
                 'check'
             ], capture_output=True, text=True, timeout=30)
             
             if result.returncode == 0:
                 try:
                     import json
-                    # Suche nach JSON in der Ausgabe
-                    output_lines = result.stdout.strip().split('\n')
-                    json_line = None
-                    for line in output_lines:
-                        if line.strip().startswith('{'):
-                            json_line = line.strip()
-                            break
-                    
-                    if json_line:
-                        update_info = json.loads(json_line)
-                        return update_info
-                    else:
-                        return {'error': 'Keine JSON-Antwort vom Update-System'}
+                    update_info = json.loads(result.stdout)
+                    return update_info
                 except json.JSONDecodeError as e:
                     return {'error': f'JSON-Parse-Fehler: {e}'}
             else:
@@ -112,15 +101,15 @@ class DeviceBoxApp:
             return {'error': str(e)}
     
     def perform_update(self):
-        """Führt das Update mit Release-System durch"""
+        """Führt das Update mit professionellem Update-System durch"""
         if self.update_in_progress:
             return {'error': 'Update bereits in Bearbeitung'}
         
         self.update_in_progress = True
         
         try:
-            # Verwende das neue Release-basierte Update-System
-            update_script = os.path.join(os.path.dirname(__file__), 'update.py')
+            # Verwende das neue professionelle Update-System
+            update_script = os.path.join(os.path.dirname(__file__), 'update_system.py')
             
             if os.path.exists(update_script):
                 # Führe das Skript mit sudo aus, da es systemctl-Befehle verwendet

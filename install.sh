@@ -168,9 +168,9 @@ perform_update() {
         source venv/bin/activate
     fi
     
-    # Führe Auto-Update-Skript aus
-    if [ -f "update.py" ]; then
-        sudo -u "$SERVICE_USER" python3 update.py check
+    # Führe professionelles Update-System aus
+    if [ -f "update_system.py" ]; then
+        sudo -u "$SERVICE_USER" python3 update_system.py check
         UPDATE_SUCCESS=$?
         
         if [ $UPDATE_SUCCESS -eq 0 ]; then
@@ -184,7 +184,7 @@ perform_update() {
             return 1
         fi
     else
-        error "Auto-Update-Skript nicht gefunden"
+        error "Update-System nicht gefunden"
         return 1
     fi
     
@@ -274,7 +274,7 @@ download_app() {
     # Setze Berechtigungen
     sudo chown -R "$SERVICE_USER:$SERVICE_USER" "$INSTALL_DIR"
 sudo chmod +x "$INSTALL_DIR/app.py"
-sudo chmod +x "$INSTALL_DIR/update.py"
+sudo chmod +x "$INSTALL_DIR/update_system.py"
 sudo chmod +x "$INSTALL_DIR/device_manager.py"
     
     # Aufräumen
@@ -522,8 +522,8 @@ main() {
         log "  sudo journalctl -u devicebox -f     # Logs anzeigen"
         log ""
         log "Update-Befehle:"
-        log "  python3 $INSTALL_DIR/update.py check # Update-Check"
-        log "  python3 $INSTALL_DIR/update.py update # Update durchführen"
+        log "  python3 $INSTALL_DIR/update_system.py check # Update-Check"
+        log "  python3 $INSTALL_DIR/update_system.py update # Update durchführen"
         
     else
         log "=== DeviceBox Installation ==="
@@ -549,8 +549,8 @@ main() {
         log "  sudo journalctl -u devicebox -f     # Logs anzeigen"
         log ""
         log "Update-Befehle:"
-        log "  python3 $INSTALL_DIR/update.py check # Update-Check"
-        log "  python3 $INSTALL_DIR/update.py update # Update durchführen"
+        log "  python3 $INSTALL_DIR/update_system.py check # Update-Check"
+        log "  python3 $INSTALL_DIR/update_system.py update # Update durchführen"
     fi
 }
 
