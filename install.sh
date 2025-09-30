@@ -183,33 +183,6 @@ EOF
     # Copy service file (VERWENDE NUR die korrekte Service-Datei!)
     sudo cp /tmp/devicebox.service /etc/systemd/system/
     
-    # ENTFERNE die alte Service-Datei aus dem Repository (falls vorhanden)
-    sudo rm -f /etc/systemd/system/devicebox.service.bak 2>/dev/null || true
-    
-    # STELLE SICHER dass die korrekte Service-Datei verwendet wird
-    sudo tee /etc/systemd/system/devicebox.service > /dev/null << EOF
-[Unit]
-Description=DeviceBox - Raspberry Pi Web Interface
-After=network.target
-Wants=network.target
-
-[Service]
-Type=simple
-User=$USER
-Group=$USER
-WorkingDirectory=/home/$USER/devicebox
-Environment=PATH=/home/$USER/devicebox/venv/bin
-Environment=PYTHONUNBUFFERED=1
-ExecStart=/home/$USER/devicebox/venv/bin/python -u /home/$USER/devicebox/app.py
-Restart=always
-RestartSec=10
-StandardOutput=journal
-StandardError=journal
-
-[Install]
-WantedBy=multi-user.target
-EOF
-    
     # Reload systemd
     sudo systemctl daemon-reload
     
