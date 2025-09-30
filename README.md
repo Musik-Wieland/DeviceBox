@@ -79,6 +79,11 @@ curl -fsSL https://raw.githubusercontent.com/Musik-Wieland/DeviceBox/main/instal
 sudo python3 /opt/devicebox/auto_update.py
 ```
 
+**Automatisches Update (curl-optimiert):**
+```bash
+curl -fsSL https://raw.githubusercontent.com/Musik-Wieland/DeviceBox/main/update_curl.sh | bash
+```
+
 ### Update-Features
 
 - ✅ **Backup-System** - Automatische Sicherung vor Updates

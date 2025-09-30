@@ -276,6 +276,7 @@ download_app() {
 sudo chmod +x "$INSTALL_DIR/app.py"
 sudo chmod +x "$INSTALL_DIR/update.py"
 sudo chmod +x "$INSTALL_DIR/update_simple.py"
+sudo chmod +x "$INSTALL_DIR/update_curl.sh"
 sudo chmod +x "$INSTALL_DIR/auto_update.py"
 sudo chmod +x "$INSTALL_DIR/device_manager.py"
 sudo chmod +x "$INSTALL_DIR/debug_update.py"
@@ -457,8 +458,36 @@ main() {
         log "Bestehende Installation gefunden in: $INSTALL_DIR"
         log ""
         
-        # Frage den Benutzer nach Bestätigung (außer bei --force-update)
-        if [ "$FORCE_UPDATE" = false ]; then
+        # Prüfe ob das Skript über curl ausgeführt wird
+        CURL_EXECUTION=false
+        INTERACTIVE_MODE=true
+        
+        # Prüfe verschiedene Ausführungskontexte
+        if [ -t 0 ]; then
+            # Terminal-Verbindung vorhanden
+            CURL_EXECUTION=false
+            INTERACTIVE_MODE=true
+        else
+            # Keine Terminal-Verbindung (wahrscheinlich curl)
+            CURL_EXECUTION=true
+            INTERACTIVE_MODE=false
+        fi
+        
+        # Zusätzliche Prüfung: Ist stdin ein Pipe?
+        if [ -p /dev/stdin ] || [ ! -t 0 ]; then
+            CURL_EXECUTION=true
+            INTERACTIVE_MODE=false
+        fi
+        
+        # Prüfe ob das Skript über curl heruntergeladen wurde
+        if [ -n "$SSH_CLIENT" ] || [ -n "$SSH_TTY" ]; then
+            # SSH-Verbindung - wahrscheinlich interaktiv
+            INTERACTIVE_MODE=true
+            CURL_EXECUTION=false
+        fi
+        
+        # Frage den Benutzer nach Bestätigung (außer bei --force-update oder curl)
+        if [ "$FORCE_UPDATE" = false ] && [ "$INTERACTIVE_MODE" = true ]; then
             warning "DeviceBox ist bereits installiert!"
             warning "Dies wird ein Update der bestehenden Installation durchführen."
             echo ""
@@ -470,8 +499,18 @@ main() {
                 exit 0
             fi
         else
-            log "Force-Update aktiviert - Update ohne Bestätigung"
+            if [ "$FORCE_UPDATE" = true ]; then
+                log "Force-Update aktiviert - Update ohne Bestätigung"
+            else
+                log "Automatisches Update über curl erkannt - Update ohne Bestätigung"
+            fi
         fi
+        
+        # Debug-Informationen
+        log "Ausführungskontext:"
+        log "  Interactive Mode: $INTERACTIVE_MODE"
+        log "  Curl Execution: $CURL_EXECUTION"
+        log "  Force Update: $FORCE_UPDATE"
         
         # Führe Update durch
         check_system
