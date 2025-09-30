@@ -32,7 +32,7 @@ warning() {
 GITHUB_REPO="${GITHUB_REPO:-Musik-Wieland/DeviceBox}"
 APP_NAME="${APP_NAME:-devicebox}"
 INSTALL_DIR="${INSTALL_DIR:-/opt/devicebox}"
-SERVICE_USER="${SERVICE_USER:-pi}"
+SERVICE_USER="${SERVICE_USER:-$(whoami)}"
 PORT="${PORT:-8080}"
 HOST="${HOST:-0.0.0.0}"
 

@@ -5,8 +5,8 @@ Wants=network.target
 
 [Service]
 Type=simple
-User=pi
-Group=pi
+User=musikwieland
+Group=musikwieland
 WorkingDirectory=/opt/devicebox
 Environment=PATH=/opt/devicebox/venv/bin
 Environment=GITHUB_REPO=Musik-Wieland/DeviceBox

@@ -42,7 +42,7 @@ Vor der Installation können Umgebungsvariablen gesetzt werden:
 export GITHUB_REPO="Musik-Wieland/DeviceBox"
 export APP_NAME="devicebox"
 export INSTALL_DIR="/opt/devicebox"
-export SERVICE_USER="pi"
+export SERVICE_USER="musikwieland"
 export PORT="8080"
 export HOST="0.0.0.0"
 ```
@@ -131,7 +131,7 @@ devicebox/
 | `APP_NAME` | `devicebox` | Anwendungsname |
 | `INSTALL_DIR` | `/opt/devicebox` | Installationsverzeichnis |
 | `DATA_DIR` | `/opt/devicebox/data` | Datenverzeichnis |
-| `SERVICE_USER` | `pi` | Service-Benutzer |
+| `SERVICE_USER` | `musikwieland` | Service-Benutzer |
 | `HOST` | `0.0.0.0` | Web-Server Host |
 | `PORT` | `8080` | Web-Server Port |
 | `DEBUG` | `False` | Debug-Modus |
