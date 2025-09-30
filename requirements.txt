@@ -1,35 +1,35 @@
 # DeviceBox Python Dependencies
 # Core Web Framework
-Flask==3.0.0
-Werkzeug==3.0.1
+Flask>=3.0.0
+Werkzeug>=3.0.1
 
 # System Monitoring
-psutil==5.9.6
+psutil>=5.9.0
 
 # HTTP Requests
-requests==2.31.0
+requests>=2.31.0
 
 # Date/Time Handling
-python-dateutil==2.8.2
+python-dateutil>=2.8.0
 
 # Configuration Management
-python-dotenv==1.0.0
+python-dotenv>=1.0.0
 
 # Logging
-colorlog==6.8.0
+colorlog>=6.8.0
 
-# Security
-cryptography==41.0.8
+# Security (kompatible Version für ARM64)
+cryptography>=41.0.0
 
 # Optional: For advanced features
 # GPIO access for Raspberry Pi
-# RPi.GPIO==0.7.1
+# RPi.GPIO>=0.7.1
 
 # Optional: For sensor readings
-# Adafruit-DHT==1.4.0
+# Adafruit-DHT>=1.4.0
 
 # Optional: For camera support
-# picamera==1.13
+# picamera>=1.13
 
 # Optional: For I2C communication
-# smbus2==0.4.3
+# smbus2>=0.4.3

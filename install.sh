@@ -188,7 +188,24 @@ install_python_deps() {
     
     # Installiere Abhängigkeiten
     pip install --upgrade pip
-    pip install -r requirements.txt
+    
+    # Installiere Abhängigkeiten mit Fehlerbehandlung
+    log "Installiere Python-Pakete..."
+    if pip install -r requirements.txt; then
+        success "Alle Python-Abhängigkeiten installiert"
+    else
+        warning "Einige Pakete konnten nicht installiert werden, versuche alternative Installation..."
+        
+        # Installiere Pakete einzeln mit flexibleren Versionen
+        pip install Flask Werkzeug psutil requests python-dateutil python-dotenv colorlog
+        
+        # Versuche cryptography mit flexiblerer Version
+        if ! pip install cryptography; then
+            warning "cryptography konnte nicht installiert werden, überspringe..."
+        fi
+        
+        success "Grundlegende Python-Abhängigkeiten installiert"
+    fi
     
     success "Python-Abhängigkeiten installiert"
 }
