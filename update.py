@@ -28,7 +28,15 @@ class DeviceBoxUpdater:
             response = requests.get(url, timeout=30)
             
             if response.status_code == 200:
-                return response.json()
+                release_data = response.json()
+                
+                # Prüfe ob Assets vorhanden sind
+                if not release_data.get('assets') or len(release_data['assets']) == 0:
+                    raise Exception("Keine Release-Assets verfügbar. Verwende das Auto-Update-System stattdessen.")
+                
+                return release_data
+            elif response.status_code == 404:
+                raise Exception("Keine Releases verfügbar. Verwende das Auto-Update-System stattdessen.")
             else:
                 raise Exception(f"GitHub API Fehler: {response.status_code}")
         except Exception as e:
@@ -173,6 +181,11 @@ class DeviceBoxUpdater:
             
             # Hole Release-Informationen
             release_info = self.get_latest_release()
+            
+            # Prüfe ob Assets vorhanden sind
+            if not release_info.get('assets') or len(release_info['assets']) == 0:
+                raise Exception("Keine Release-Assets verfügbar")
+            
             download_url = release_info['assets'][0]['browser_download_url']
             
             # Erstelle temporäres Verzeichnis
@@ -194,6 +207,25 @@ class DeviceBoxUpdater:
             
         except Exception as e:
             print(f"Update fehlgeschlagen: {e}")
+            
+            # Wenn Release-basiertes Update fehlschlägt, versuche Auto-Update
+            if "Keine Release" in str(e) or "404" in str(e):
+                print("\nVersuche Auto-Update-System...")
+                try:
+                    auto_update_script = os.path.join(self.install_dir, 'auto_update.py')
+                    if os.path.exists(auto_update_script):
+                        result = subprocess.run([sys.executable, auto_update_script], 
+                                              capture_output=True, text=True, timeout=300)
+                        if result.returncode == 0:
+                            print("Auto-Update erfolgreich!")
+                            return True
+                        else:
+                            print(f"Auto-Update fehlgeschlagen: {result.stderr}")
+                    else:
+                        print("Auto-Update-Skript nicht gefunden")
+                except Exception as auto_e:
+                    print(f"Auto-Update fehlgeschlagen: {auto_e}")
+            
             return False
 
 def main():
