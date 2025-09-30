@@ -1,0 +1,124 @@
+name: Auto Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Manueller Trigger möglich
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Alle Commits und Tags laden
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install requests packaging
+
+      - name: Get current version
+        id: current_version
+        run: |
+          CURRENT_VERSION=$(cat VERSION)
+          echo "current=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $CURRENT_VERSION"
+
+      - name: Check if version bump needed
+        id: version_check
+        run: |
+          CURRENT_VERSION="${{ steps.current_version.outputs.current }}"
+          
+          # Prüfe ob es bereits einen Tag für diese Version gibt
+          if git tag -l "v$CURRENT_VERSION" | grep -q "v$CURRENT_VERSION"; then
+            echo "Version $CURRENT_VERSION already exists, bumping..."
+            # Patch-Version erhöhen
+            NEW_VERSION=$(echo $CURRENT_VERSION | awk -F. '{ $NF = $NF + 1; OFS="."; print $1,$2,$3 }')
+            echo "new=$NEW_VERSION" >> $GITHUB_OUTPUT
+            echo "bump=true" >> $GITHUB_OUTPUT
+          else
+            echo "Version $CURRENT_VERSION is new, using it..."
+            echo "new=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+            echo "bump=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Bump version
+        if: steps.version_check.outputs.bump == 'true'
+        run: |
+          NEW_VERSION="${{ steps.version_check.outputs.new }}"
+          echo $NEW_VERSION > VERSION
+          
+          # Git konfigurieren
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          # Version committen
+          git add VERSION
+          git commit -m "chore: bump version to $NEW_VERSION"
+          
+          # Tag erstellen
+          git tag "v$NEW_VERSION"
+          
+          # Pushen
+          git push origin main
+          git push origin "v$NEW_VERSION"
+
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.version_check.outputs.new }}
+          release_name: DeviceBox v${{ steps.version_check.outputs.new }}
+          body: |
+            ## DeviceBox v${{ steps.version_check.outputs.new }}
+            
+            ### Automatisches Release
+            - Version: ${{ steps.version_check.outputs.new }}
+            - Commit: ${{ github.sha }}
+            - Datum: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+            
+            ### Installation
+            ```bash
+            curl -fsSL https://raw.githubusercontent.com/Musik-Wieland/DeviceBox/main/install.sh | bash
+            ```
+            
+            ### Update
+            ```bash
+            sudo python3 /opt/devicebox/update_system.py update
+            ```
+          draft: false
+          prerelease: false
+
+      - name: Update version.json
+        run: |
+          NEW_VERSION="${{ steps.version_check.outputs.new }}"
+          
+          # Erstelle version.json für das Update-System
+          cat > version.json << EOF
+          {
+            "version": "$NEW_VERSION",
+            "build_date": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+            "commit": "${{ github.sha }}",
+            "branch": "${{ github.ref_name }}"
+          }
+          EOF
+          
+          # Committen und pushen
+          git add version.json
+          git commit -m "chore: update version.json to $NEW_VERSION" || echo "No changes to commit"
+          git push origin main || echo "Nothing to push"
+
+      - name: Notify success
+        run: |
+          echo "✅ Release v${{ steps.version_check.outputs.new }} erfolgreich erstellt!"
+          echo "🔗 Release URL: https://github.com/Musik-Wieland/DeviceBox/releases/tag/v${{ steps.version_check.outputs.new }}"
