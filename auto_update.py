@@ -218,18 +218,33 @@ class DeviceBoxAutoUpdater:
             commit_hash, commit_message = self.get_latest_commit_hash()
             
             # Vergleiche mit gespeichertem Commit-Hash
+            stored_hash = ''
             if os.path.exists(self.version_file):
-                with open(self.version_file, 'r') as f:
-                    version_data = json.load(f)
-                    stored_hash = version_data.get('commit_hash', '')
-                    
-                    if commit_hash == stored_hash:
-                        return {
-                            'available': False,
-                            'current_version': current_version,
-                            'latest_version': f"1.0.{commit_hash[:8]}",
-                            'message': 'System ist aktuell'
-                        }
+                try:
+                    with open(self.version_file, 'r') as f:
+                        version_data = json.load(f)
+                        stored_hash = version_data.get('commit_hash', '')
+                except Exception as e:
+                    print(f"Fehler beim Lesen der Version-Datei: {e}")
+                    stored_hash = ''
+            
+            # Wenn keine gespeicherte Version vorhanden ist, aktualisiere die Version-Datei
+            if not stored_hash:
+                self.update_version_file()
+                return {
+                    'available': False,
+                    'current_version': current_version,
+                    'latest_version': f"1.0.{commit_hash[:8]}",
+                    'message': 'Version-Datei aktualisiert'
+                }
+            
+            if commit_hash == stored_hash:
+                return {
+                    'available': False,
+                    'current_version': current_version,
+                    'latest_version': f"1.0.{commit_hash[:8]}",
+                    'message': 'System ist aktuell'
+                }
             
             return {
                 'available': True,
@@ -249,7 +264,7 @@ class DeviceBoxAutoUpdater:
             # Prüfe auf Updates
             update_info = self.check_for_updates()
             if not update_info.get('available', False):
-                print("Kein Update verfügbar")
+                print(f"Kein Update verfügbar: {update_info.get('message', 'System ist aktuell')}")
                 return True
             
             print(f"Update verfügbar: {update_info['latest_version']}")
@@ -273,6 +288,8 @@ class DeviceBoxAutoUpdater:
             
         except Exception as e:
             print(f"Auto-Update fehlgeschlagen: {e}")
+            import traceback
+            traceback.print_exc()
             return False
 
 def main():
@@ -285,8 +302,18 @@ def main():
         print(json.dumps(update_info, indent=2))
     else:
         # Vollständiges Update durchführen
-        success = updater.update()
-        sys.exit(0 if success else 1)
+        try:
+            success = updater.update()
+            if success:
+                print("Update erfolgreich abgeschlossen")
+            else:
+                print("Update fehlgeschlagen")
+            sys.exit(0 if success else 1)
+        except Exception as e:
+            print(f"Kritischer Fehler beim Update: {e}")
+            import traceback
+            traceback.print_exc()
+            sys.exit(1)
 
 if __name__ == '__main__':
     main()

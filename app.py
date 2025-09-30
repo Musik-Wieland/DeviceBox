@@ -111,14 +111,26 @@ class DeviceBoxApp:
                 result = subprocess.run([sys.executable, auto_update_script], 
                                       capture_output=True, text=True, timeout=300)
                 
+                # Logge die Ausgabe für Debugging
+                print(f"Update-Skript Ausgabe: {result.stdout}")
+                if result.stderr:
+                    print(f"Update-Skript Fehler: {result.stderr}")
+                
                 if result.returncode == 0:
-                    return {'success': True, 'message': 'Auto-Update erfolgreich abgeschlossen'}
+                    # Prüfe ob wirklich ein Update durchgeführt wurde
+                    if "Kein Update verfügbar" in result.stdout:
+                        return {'success': True, 'message': 'System ist bereits aktuell'}
+                    else:
+                        return {'success': True, 'message': 'Auto-Update erfolgreich abgeschlossen'}
                 else:
-                    return {'error': f'Auto-Update fehlgeschlagen: {result.stderr}'}
+                    error_msg = result.stderr if result.stderr else result.stdout
+                    return {'error': f'Auto-Update fehlgeschlagen: {error_msg}'}
             else:
                 return {'error': 'Auto-Update-Skript nicht gefunden'}
+        except subprocess.TimeoutExpired:
+            return {'error': 'Update-Timeout: Das Update dauerte zu lange'}
         except Exception as e:
-            return {'error': str(e)}
+            return {'error': f'Unerwarteter Fehler: {str(e)}'}
         finally:
             self.update_in_progress = False
 
