@@ -102,15 +102,17 @@ class USBDeviceManager:
                             # Erkenne Gerätetyp
                             device_type = self.detect_device_type(description, vendor_product)
                             
-                            devices.append({
-                                'bus': bus,
-                                'device_id': device_id,
-                                'vendor_product': vendor_product,
-                                'description': description,
-                                'manufacturer': manufacturer,
-                                'type': 'usb',
-                                'device_type': device_type
-                            })
+                            # Prüfe ob es ein interessantes Gerät ist
+                            if device_type != 'unknown' or self.is_interesting_device(description, vendor_product):
+                                devices.append({
+                                    'bus': bus,
+                                    'device_id': device_id,
+                                    'vendor_product': vendor_product,
+                                    'description': description,
+                                    'manufacturer': manufacturer,
+                                    'type': 'usb',
+                                    'device_type': device_type
+                                })
         except Exception as e:
             print(f"Fehler beim Ermitteln der USB-Geräte: {e}")
         
@@ -212,6 +214,33 @@ class USBDeviceManager:
             return known_devices[vendor_product]
         
         return 'unknown'
+    
+    def is_interesting_device(self, description: str, vendor_product: str) -> bool:
+        """Prüft ob es sich um ein interessantes Gerät handelt"""
+        interesting_keywords = [
+            'scanner', 'barcode', 'printer', 'card', 'payment', 'pos',
+            'terminal', 'reader', 'scale', 'display', 'monitor'
+        ]
+        
+        description_lower = description.lower()
+        for keyword in interesting_keywords:
+            if keyword in description_lower:
+                return True
+        
+        # Bekannte interessante Vendor-IDs
+        interesting_vendors = [
+            '05f9',  # PSC Scanning
+            '04b8',  # Epson
+            '04f9',  # Brother
+            '0bda',  # Realtek
+            '1a2c',  # China Resource Semico
+        ]
+        
+        vendor_id = vendor_product.split(':')[0]
+        if vendor_id in interesting_vendors:
+            return True
+            
+        return False
     
     def extract_manufacturer(self, description: str) -> str:
         """Extrahiert den Hersteller aus der Gerätebeschreibung"""
