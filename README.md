@@ -38,15 +38,22 @@ chmod +x install.sh
 
 ### Vollständige Deinstallation
 
+**Interaktive Deinstallation:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Musik-Wieland/DeviceBox/main/uninstall.sh | bash
+```
+
+**Automatische Deinstallation (ohne Nachfrage):**
+```bash
+curl -fsSL https://raw.githubusercontent.com/Musik-Wieland/DeviceBox/main/uninstall.sh | bash -s -- --force
 ```
 
 ### Manuelle Deinstallation
 
 ```bash
 chmod +x uninstall.sh
-./uninstall.sh
+./uninstall.sh          # Interaktive Deinstallation
+./uninstall.sh --force   # Automatische Deinstallation
 ```
 
 Das Deinstallationsskript entfernt:

@@ -54,6 +54,12 @@ log "Port: $PORT"
 
 # Bestätigung vom Benutzer
 confirm_uninstall() {
+    # Prüfe auf --force Flag
+    if [[ "$1" == "--force" ]]; then
+        warning "Force-Modus aktiviert - Deinstallation ohne Bestätigung"
+        return 0
+    fi
+    
     warning "ACHTUNG: Dies wird DeviceBox vollständig deinstallieren!"
     warning "Alle Daten, Konfigurationen und Abhängigkeiten werden entfernt."
     echo ""
@@ -63,6 +69,10 @@ confirm_uninstall() {
     echo "  - Nginx-Konfiguration"
     echo "  - Firewall-Regeln"
     echo "  - Python-Abhängigkeiten (optional)"
+    echo ""
+    echo "Verwendung:"
+    echo "  ./uninstall.sh          # Interaktive Deinstallation"
+    echo "  ./uninstall.sh --force  # Automatische Deinstallation"
     echo ""
     read -p "Möchten Sie fortfahren? (y/N): " -r response
     if [[ ! "$response" =~ ^[Yy]$ ]]; then
@@ -320,13 +330,26 @@ show_summary() {
 main() {
     log "=== DeviceBox Deinstallation ==="
     
-    confirm_uninstall
+    # Prüfe auf Force-Flag
+    FORCE_MODE=false
+    if [[ "$1" == "--force" ]]; then
+        FORCE_MODE=true
+    fi
+    
+    confirm_uninstall "$1"
     remove_service
     remove_installation
     remove_nginx_config
     remove_firewall_rules
-    remove_python_dependencies
-    remove_system_dependencies
+    
+    # Nur bei interaktiver Deinstallation nach Abhängigkeiten fragen
+    if [[ "$FORCE_MODE" == false ]]; then
+        remove_python_dependencies
+        remove_system_dependencies
+    else
+        log "Force-Modus: Überspringe optionale Abhängigkeiten"
+    fi
+    
     cleanup_temp_files
     check_remaining_references
     show_summary
