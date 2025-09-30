@@ -367,11 +367,14 @@ class DeviceBoxUpdater:
             # Hole Release-Informationen
             release_info = update_info['release_info']
             
-            # Prüfe ob Assets vorhanden sind
+            # Prüfe ob Assets vorhanden sind, falls nicht verwende zipball_url
             if not release_info.get('assets') or len(release_info['assets']) == 0:
-                raise Exception("Keine Release-Assets verfügbar")
-            
-            download_url = release_info['assets'][0]['browser_download_url']
+                # Verwende zipball_url als Fallback
+                download_url = release_info.get('zipball_url')
+                if not download_url:
+                    raise Exception("Keine Release-Assets oder zipball_url verfügbar")
+            else:
+                download_url = release_info['assets'][0]['browser_download_url']
             
             # Erstelle temporäres Verzeichnis
             with tempfile.TemporaryDirectory() as temp_dir:
