@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# DeviceBox - Deinstallationsskript
+# DeviceBox - Automatisches Deinstallationsskript
 # Einzeiler: curl -sSL https://raw.githubusercontent.com/Musik-Wieland/DeviceBox/main/uninstall.sh | bash
 
 set -e
@@ -39,8 +39,8 @@ print_banner() {
     echo "/_____/\___/|___/_/\___/\___/_____/\____/_/|_|  "
     echo "                                                "
     echo -e "${NC}"
-    echo "DeviceBox Deinstallation"
-    echo "========================"
+    echo "DeviceBox Automatische Deinstallation"
+    echo "====================================="
 }
 
 # Check if running as root
@@ -100,16 +100,10 @@ remove_firewall() {
 main() {
     print_banner
     
-    info "DeviceBox Deinstallation für Benutzer: $USER"
+    info "DeviceBox Automatische Deinstallation für Benutzer: $USER"
+    warning "DeviceBox wird jetzt vollständig von Ihrem System entfernt..."
     
-    # Confirmation - funktioniert auch über curl | bash
-    echo
-    warning "Dies wird DeviceBox vollständig von Ihrem System entfernen!"
-    echo
-    echo "Drücken Sie ENTER um fortzufahren oder Ctrl+C zum Abbrechen..."
-    read -r
-    
-    # Deinstallation steps
+    # Deinstallation steps - KEINE RÜCKFRAGE!
     check_root
     remove_service
     remove_installation
