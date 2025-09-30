@@ -274,11 +274,11 @@ class DeviceBoxApp {
         container.innerHTML = devices.map(device => `
             <div class="device-item">
                 <div class="device-info">
-                    <div class="device-name">${device.description || 'Unbekanntes Gerät'}</div>
+                    <div class="device-name">${device.description && device.description !== 'n/a' ? device.description : 'Unbekanntes Gerät'}</div>
                     <div class="device-description">
                         ${device.type === 'usb' ? 
-                            `USB: ${device.vendor_product}` : 
-                            `Seriell: ${device.port}`
+                            `USB: ${device.vendor_product || 'Unbekannt'}` : 
+                            `Seriell: ${device.port || 'Unbekannt'}`
                         }
                         ${device.manufacturer ? ` - ${device.manufacturer}` : ''}
                     </div>

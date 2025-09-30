@@ -155,14 +155,14 @@ class DeviceBoxUpdater:
     def create_backup(self):
         """Backup der aktuellen Installation erstellen"""
         try:
-            backup_dir = f"{self.install_dir}_backup_{self.current_version.replace('.', '_')}"
+            backup_dir = Path(f"{self.install_dir}_backup_{self.current_version.replace('.', '_')}")
             
             if backup_dir.exists():
                 shutil.rmtree(backup_dir)
             
             shutil.copytree(self.install_dir, backup_dir)
             logger.info(f"Backup erstellt: {backup_dir}")
-            return backup_dir
+            return str(backup_dir)
             
         except Exception as e:
             logger.error(f"Fehler beim Backup: {e}")
@@ -182,19 +182,19 @@ class DeviceBoxUpdater:
             backup_dir = self.create_backup()
             
             # Alte Installation temporär verschieben
-            old_dir = f"{self.install_dir}_old"
+            old_dir = Path(f"{self.install_dir}_old")
             if old_dir.exists():
                 shutil.rmtree(old_dir)
             
             if self.install_dir.exists():
-                shutil.move(str(self.install_dir), old_dir)
+                shutil.move(str(self.install_dir), str(old_dir))
             
             # Neue Installation kopieren
             logger.info(f"Kopiere neue Version nach: {self.install_dir}")
             shutil.copytree(extracted_dir, str(self.install_dir))
             
             # Wichtige Daten wiederherstellen
-            self.restore_user_data(old_dir)
+            self.restore_user_data(str(old_dir))
             
             # Berechtigungen setzen (nur auf Raspberry Pi)
             if self.is_raspberry_pi():
