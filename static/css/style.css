@@ -416,6 +416,70 @@ body {
     font-size: 12px;
 }
 
+/* Scanner Section */
+.scanner-section {
+    background: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    padding: var(--spacing-lg);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: var(--spacing-lg);
+}
+
+.scanner-info {
+    margin-top: var(--spacing-md);
+}
+
+.scanner-status {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+}
+
+.scanner-indicator {
+    font-size: 12px;
+    transition: color 0.3s ease;
+}
+
+.scanner-indicator.connected {
+    color: var(--success-color);
+}
+
+.scanner-indicator.disconnected {
+    color: var(--error-color);
+}
+
+.scanner-details {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    margin-top: var(--spacing-md);
+}
+
+.detail-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-sm) 0;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.detail-item:last-child {
+    border-bottom: none;
+}
+
+.detail-label {
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.detail-value {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+}
+
 /* Update Section */
 .update-section {
     background: var(--bg-primary);

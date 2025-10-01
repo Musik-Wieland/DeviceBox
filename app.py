@@ -318,6 +318,36 @@ def api_get_device_status(device_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/scanner/status')
+def api_get_scanner_status():
+    """API-Endpoint für Datalogic Touch 65 Scanner-Status"""
+    try:
+        status = device_manager.datalogic_scanner.get_status()
+        return jsonify(status)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/scanner/connect', methods=['POST'])
+def api_connect_scanner():
+    """API-Endpoint zum Verbinden des Datalogic Touch 65 Scanners"""
+    try:
+        success = device_manager.datalogic_scanner.connect()
+        if success:
+            return jsonify({'success': True, 'message': 'Scanner erfolgreich verbunden'})
+        else:
+            return jsonify({'success': False, 'error': 'Scanner-Verbindung fehlgeschlagen'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/scanner/disconnect', methods=['POST'])
+def api_disconnect_scanner():
+    """API-Endpoint zum Trennen des Datalogic Touch 65 Scanners"""
+    try:
+        device_manager.datalogic_scanner.disconnect()
+        return jsonify({'success': True, 'message': 'Scanner getrennt'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     # Konfiguration aus Umgebungsvariablen
     host = os.getenv('HOST', '0.0.0.0')

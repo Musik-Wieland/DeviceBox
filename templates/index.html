@@ -101,6 +101,52 @@
             </div>
         </section>
 
+        <!-- Datalogic Touch 65 Scanner Section -->
+        <section class="scanner-section">
+            <div class="section-header">
+                <h2>Datalogic Touch 65 Scanner</h2>
+                <div class="header-actions">
+                    <button class="btn btn-primary" id="connect-scanner-btn">
+                        <i class="fas fa-plug"></i>
+                        Verbinden
+                    </button>
+                    <button class="btn btn-secondary" id="disconnect-scanner-btn" style="display: none;">
+                        <i class="fas fa-unlink"></i>
+                        Trennen
+                    </button>
+                    <button class="btn btn-success" id="test-scanner-btn" style="display: none;">
+                        <i class="fas fa-barcode"></i>
+                        Test-Scan
+                    </button>
+                </div>
+            </div>
+            
+            <div class="scanner-info" id="scanner-info">
+                <div class="scanner-status">
+                    <i class="fas fa-circle scanner-indicator"></i>
+                    <span id="scanner-status-text">Scanner nicht verbunden</span>
+                </div>
+                <div class="scanner-details" id="scanner-details" style="display: none;">
+                    <div class="detail-item">
+                        <span class="detail-label">Gerätepfad:</span>
+                        <span class="detail-value" id="scanner-path">--</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Gerätename:</span>
+                        <span class="detail-value" id="scanner-name">--</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Scan-Anzahl:</span>
+                        <span class="detail-value" id="scanner-count">0</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Letzter Scan:</span>
+                        <span class="detail-value" id="scanner-last-scan">--</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- Update Section (Minimal) -->
         <section class="update-section">
             <div class="section-header">

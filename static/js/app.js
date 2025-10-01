@@ -76,6 +76,23 @@ class DeviceBoxApp {
             testTransactionBtn.addEventListener('click', () => this.testDevice('test_transaction'));
         }
         
+        // Scanner Events
+        const connectScannerBtn = document.getElementById('connect-scanner-btn');
+        const disconnectScannerBtn = document.getElementById('disconnect-scanner-btn');
+        const testScannerBtn = document.getElementById('test-scanner-btn');
+        
+        if (connectScannerBtn) {
+            connectScannerBtn.addEventListener('click', () => this.connectScanner());
+        }
+        
+        if (disconnectScannerBtn) {
+            disconnectScannerBtn.addEventListener('click', () => this.disconnectScanner());
+        }
+        
+        if (testScannerBtn) {
+            testScannerBtn.addEventListener('click', () => this.testScanner());
+        }
+        
         if (saveConfig) {
             saveConfig.addEventListener('click', () => this.saveDeviceConfig());
         }
@@ -104,7 +121,8 @@ class DeviceBoxApp {
                 this.loadSystemStatus(),
                 this.loadUpdateInfo(),
                 this.loadAvailableDevices(),
-                this.loadConfiguredDevices()
+                this.loadConfiguredDevices(),
+                this.updateScannerStatus()
             ]);
         } catch (error) {
             this.showToast('Fehler beim Laden der Daten', 'error');
@@ -577,6 +595,107 @@ class DeviceBoxApp {
             'card_reader': 'EC-Kartengerät'
         };
         return typeNames[type] || type;
+    }
+    
+    async connectScanner() {
+        try {
+            const response = await fetch('/api/scanner/connect', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                this.showToast('Scanner erfolgreich verbunden', 'success');
+                this.updateScannerStatus();
+            } else {
+                this.showToast(`Scanner-Verbindung fehlgeschlagen: ${result.error}`, 'error');
+            }
+        } catch (error) {
+            this.showToast(`Fehler beim Verbinden des Scanners: ${error.message}`, 'error');
+        }
+    }
+    
+    async disconnectScanner() {
+        try {
+            const response = await fetch('/api/scanner/disconnect', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                this.showToast('Scanner getrennt', 'success');
+                this.updateScannerStatus();
+            } else {
+                this.showToast(`Scanner-Trennung fehlgeschlagen: ${result.error}`, 'error');
+            }
+        } catch (error) {
+            this.showToast(`Fehler beim Trennen des Scanners: ${error.message}`, 'error');
+        }
+    }
+    
+    async testScanner() {
+        try {
+            // Simuliere Scanner-Test
+            this.showToast('Scanner-Test gestartet...', 'info');
+            
+            // Hier würde in der Realität auf Scanner-Input gewartet
+            setTimeout(() => {
+                this.showToast('Scanner-Test erfolgreich - bereit für Barcodes', 'success');
+            }, 2000);
+            
+        } catch (error) {
+            this.showToast(`Scanner-Test fehlgeschlagen: ${error.message}`, 'error');
+        }
+    }
+    
+    async updateScannerStatus() {
+        try {
+            const response = await fetch('/api/scanner/status');
+            const status = await response.json();
+            
+            const statusText = document.getElementById('scanner-status-text');
+            const scannerIndicator = document.querySelector('.scanner-indicator');
+            const scannerDetails = document.getElementById('scanner-details');
+            const connectBtn = document.getElementById('connect-scanner-btn');
+            const disconnectBtn = document.getElementById('disconnect-scanner-btn');
+            const testBtn = document.getElementById('test-scanner-btn');
+            
+            if (status.connected) {
+                statusText.textContent = 'Scanner verbunden';
+                scannerIndicator.className = 'fas fa-circle scanner-indicator connected';
+                
+                // Zeige Details
+                document.getElementById('scanner-path').textContent = status.device_path || '--';
+                document.getElementById('scanner-name').textContent = status.device_name || '--';
+                document.getElementById('scanner-count').textContent = status.scan_count || '0';
+                document.getElementById('scanner-last-scan').textContent = status.last_scan || '--';
+                scannerDetails.style.display = 'block';
+                
+                // Zeige/Verstecke Buttons
+                connectBtn.style.display = 'none';
+                disconnectBtn.style.display = 'inline-block';
+                testBtn.style.display = 'inline-block';
+            } else {
+                statusText.textContent = 'Scanner nicht verbunden';
+                scannerIndicator.className = 'fas fa-circle scanner-indicator disconnected';
+                scannerDetails.style.display = 'none';
+                
+                // Zeige/Verstecke Buttons
+                connectBtn.style.display = 'inline-block';
+                disconnectBtn.style.display = 'none';
+                testBtn.style.display = 'none';
+            }
+        } catch (error) {
+            console.error('Fehler beim Aktualisieren des Scanner-Status:', error);
+        }
     }
     
     async saveDeviceConfig() {

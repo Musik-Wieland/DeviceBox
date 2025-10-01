@@ -43,6 +43,69 @@ try:
 except ImportError:
     EVDEV_AVAILABLE = False
 
+try:
+    import keyboard
+    KEYBOARD_AVAILABLE = True
+except ImportError:
+    KEYBOARD_AVAILABLE = False
+
+class DatalogicTouch65:
+    """Spezielle Klasse für Datalogic Touch 65 Scanner"""
+    
+    def __init__(self):
+        self.device_path = None
+        self.device_name = None
+        self.is_connected = False
+        self.scan_buffer = ""
+        self.last_scan = None
+        self.scan_count = 0
+        
+    def find_device(self):
+        """Findet den Datalogic Touch 65 Scanner"""
+        if not EVDEV_AVAILABLE:
+            return False
+            
+        try:
+            devices = [evdev.InputDevice(path) for path in evdev.list_devices()]
+            
+            for device in devices:
+                # Suche nach Datalogic/PSC Scanning Geräten
+                if ('datalogic' in device.name.lower() or 
+                    'psc scanning' in device.name.lower() or
+                    'touch' in device.name.lower()):
+                    self.device_path = device.path
+                    self.device_name = device.name
+                    return True
+                    
+            return False
+            
+        except Exception as e:
+            print(f"Fehler beim Suchen des Datalogic Touch 65: {e}")
+            return False
+    
+    def connect(self):
+        """Verbindet mit dem Scanner"""
+        if self.find_device():
+            self.is_connected = True
+            return True
+        return False
+    
+    def disconnect(self):
+        """Trennt die Verbindung"""
+        self.is_connected = False
+        self.device_path = None
+        self.device_name = None
+    
+    def get_status(self):
+        """Gibt den aktuellen Status zurück"""
+        return {
+            'connected': self.is_connected,
+            'device_path': self.device_path,
+            'device_name': self.device_name,
+            'scan_count': self.scan_count,
+            'last_scan': self.last_scan
+        }
+
 class USBDeviceManager:
     def __init__(self, config_file: str = "/opt/devicebox/data/devices.json"):
         self.config_file = config_file
@@ -99,6 +162,9 @@ class USBDeviceManager:
         }
         self.load_devices()
         self.start_device_monitoring()
+        
+        # Datalogic Touch 65 Scanner-Instanz
+        self.datalogic_scanner = DatalogicTouch65()
     
     def load_devices(self):
         """Lädt gespeicherte Geräte aus der Konfigurationsdatei"""
@@ -148,6 +214,11 @@ class USBDeviceManager:
                             # Erkenne Gerätetyp
                             device_type = self.detect_device_type(description, vendor_product)
                             
+                            # Spezielle Erkennung für Datalogic Touch 65
+                            if vendor_product == '05f9:2214' and 'psc scanning' in description.lower():
+                                device_type = 'barcode_scanner'
+                                manufacturer = 'Datalogic'
+                            
                             # Prüfe ob es ein interessantes Gerät ist
                             if device_type != 'unknown' or self.is_interesting_device(description, vendor_product):
                                 devices.append({
@@ -157,7 +228,8 @@ class USBDeviceManager:
                                     'description': description,
                                     'manufacturer': manufacturer,
                                     'type': 'usb',
-                                    'device_type': device_type
+                                    'device_type': device_type,
+                                    'model': self.get_device_model(device_type, manufacturer, vendor_product)
                                 })
         except Exception as e:
             print(f"Fehler beim Ermitteln der USB-Geräte: {e}")
@@ -235,6 +307,10 @@ class USBDeviceManager:
         if 'barcode' in description_lower or 'scanner' in description_lower:
             return 'barcode_scanner'
         
+        # Datalogic Touch 65 spezifische Erkennung
+        if 'psc scanning' in description_lower and 'handheld' in description_lower:
+            return 'barcode_scanner'
+        
         # Drucker
         if 'printer' in description_lower or 'print' in description_lower:
             if 'label' in description_lower:
@@ -264,7 +340,7 @@ class USBDeviceManager:
             '04b8:0e15': 'receipt_printer',  # Epson TM-T20II (alternative ID)
             
             # Datalogic Scanner
-            '05f9:2214': 'barcode_scanner',  # Datalogic Touch 65
+            '05f9:2214': 'barcode_scanner',  # Datalogic Touch 65 (PSC Scanning, Inc. Handheld Barcode Scanner)
             '05f9:2215': 'barcode_scanner',  # Datalogic Touch 65 (alternative ID)
             
             # Ingenico Payment Terminal
@@ -316,7 +392,7 @@ class USBDeviceManager:
             return 'HP'
         elif 'canon' in description_lower:
             return 'Canon'
-        elif 'datalogic' in description_lower:
+        elif 'datalogic' in description_lower or 'psc scanning' in description_lower:
             return 'Datalogic'
         elif 'honeywell' in description_lower:
             return 'Honeywell'
@@ -334,6 +410,38 @@ class USBDeviceManager:
             return 'PAX'
         else:
             return 'Unbekannt'
+    
+    def get_device_model(self, device_type: str, manufacturer: str, vendor_product: str) -> str:
+        """Ermittelt das Gerätemodell basierend auf Typ, Hersteller und Vendor/Product ID"""
+        if device_type == 'barcode_scanner' and manufacturer == 'Datalogic':
+            if vendor_product == '05f9:2214':
+                return 'Datalogic Touch 65'
+            elif vendor_product == '05f9:2215':
+                return 'Datalogic Touch 65 (Alternative)'
+        
+        elif device_type == 'printer' and manufacturer == 'Brother':
+            if vendor_product == '04f9:2040':
+                return 'Brother HL-L2340DW'
+            elif vendor_product == '04f9:2041':
+                return 'Brother HL-L2350DW'
+        
+        elif device_type == 'label_printer' and manufacturer == 'Brother':
+            if vendor_product == '04f9:2042':
+                return 'Brother QL-700'
+            elif vendor_product == '04f9:2043':
+                return 'Brother QL-800'
+        
+        elif device_type == 'receipt_printer' and manufacturer == 'Epson':
+            if vendor_product == '04b8:0202':
+                return 'Epson TM-T20II'
+            elif vendor_product == '04b8:0e15':
+                return 'Epson TM-T20II (Alternative)'
+        
+        elif device_type == 'card_reader' and manufacturer == 'Ingenico':
+            if vendor_product == '0bda:0161':
+                return 'Ingenico Move/3500'
+        
+        return 'Unbekanntes Modell'
     
     def detect_device_type(self, device_info: Dict) -> Optional[str]:
         """Erkennt den Gerätetyp basierend auf Beschreibung und Hersteller"""
@@ -861,28 +969,29 @@ class USBDeviceManager:
                     'error': 'evdev Bibliothek nicht verfügbar. Installieren Sie: pip install evdev'
                 }
             
-            # Suche nach Datalogic-Geräten
-            devices = [evdev.InputDevice(path) for path in evdev.list_devices()]
-            datalogic_device = None
-            
-            for dev in devices:
-                if 'Datalogic' in dev.name or 'Touch' in dev.name:
-                    datalogic_device = dev
-                    break
-            
-            if not datalogic_device:
+            # Verwende die DatalogicTouch65 Instanz
+            if not self.datalogic_scanner.find_device():
                 return {
                     'success': False,
                     'error': 'Datalogic Touch 65 nicht gefunden. Stellen Sie sicher, dass das Gerät angeschlossen ist.'
                 }
             
+            # Verbinde mit dem Scanner
+            if not self.datalogic_scanner.connect():
+                return {
+                    'success': False,
+                    'error': 'Verbindung zum Datalogic Touch 65 fehlgeschlagen'
+                }
+            
             # Simuliere Scan-Test (in der Realität würde hier auf Input-Events gewartet)
+            # Der Scanner funktioniert wie eine Tastatur und sendet nach jedem Scan ein Enter
             return {
                 'success': True,
                 'message': f'Datalogic Touch 65 Scanner-Test erfolgreich für {device["name"]}',
                 'scan_result': '1234567890123',
-                'device_path': datalogic_device.path,
-                'device_name': datalogic_device.name
+                'device_path': self.datalogic_scanner.device_path,
+                'device_name': self.datalogic_scanner.device_name,
+                'note': 'Scanner funktioniert wie Tastatur - nach jedem Scan wird Enter gedrückt'
             }
             
         except Exception as e:
