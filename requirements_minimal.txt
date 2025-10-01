@@ -1,0 +1,38 @@
+# DeviceBox Minimal Dependencies
+# Core Web Framework
+Flask>=3.0.0
+Werkzeug>=3.0.1
+
+# System Monitoring
+psutil>=5.9.0
+
+# HTTP Requests
+requests>=2.31.0
+
+# Version Management
+packaging>=23.1
+
+# Date/Time Handling
+python-dateutil>=2.8.0
+
+# Configuration Management
+python-dotenv>=1.0.0
+
+# Logging
+colorlog>=6.8.0
+
+# Security (kompatible Version für ARM64)
+cryptography>=41.0.0
+
+# USB Device Management
+pyusb>=1.2.1
+pyserial>=3.5
+
+# Optional: Device-specific Libraries (werden separat installiert)
+# brother-ql>=0.8.4
+# Pillow>=10.0.0
+# python-escpos>=3.0.0
+# pycups>=2.0.1
+# evdev>=1.4.0
+# keyboard>=0.13.5
+# hidapi>=0.14.0

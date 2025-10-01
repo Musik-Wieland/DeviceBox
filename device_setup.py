@@ -31,6 +31,10 @@ class DeviceSetup:
             "python3-dev",            # Python Development Headers
             "libusb-1.0-0-dev",       # USB Development Headers
             "libudev-dev",            # udev Development Headers
+            "libcups2-dev",           # CUPS Development Headers (für pycups)
+            "libcupsimage2-dev",      # CUPS Image Development Headers
+            "build-essential",        # Build Tools
+            "pkg-config",             # Package Configuration
         ]
         
         for dep in dependencies:
@@ -111,8 +115,8 @@ class DeviceSetup:
             
             udev_file = "/etc/udev/rules.d/99-devicebox.rules"
             
-            with open(udev_file, "w") as f:
-                f.write("\n".join(udev_rules))
+            # Erstelle udev-Regeln mit sudo
+            subprocess.run(["sudo", "tee", udev_file], input="\n".join(udev_rules), text=True, check=True)
             
             # Lade udev-Regeln neu
             subprocess.run(["sudo", "udevadm", "control", "--reload-rules"], check=True)
