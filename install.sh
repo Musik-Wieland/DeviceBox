@@ -329,6 +329,15 @@ install_python_deps() {
     else
         warning "Geräte-Setup fehlgeschlagen, aber Installation wird fortgesetzt"
     fi
+    
+    # Konfiguriere sudo-Berechtigungen für Updates
+    log "Konfiguriere Update-Berechtigungen..."
+    if python setup_sudoers.py; then
+        success "Update-Berechtigungen konfiguriert"
+    else
+        warning "Update-Berechtigungen konnten nicht automatisch konfiguriert werden"
+        log "Manuelle Konfiguration erforderlich: sudo python3 setup_sudoers.py"
+    fi
 }
 
 # Erstelle Systemd-Service

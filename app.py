@@ -111,35 +111,69 @@ class DeviceBoxApp:
             # Verwende das neue professionelle Update-System
             update_script = os.path.join(os.path.dirname(__file__), 'update_system.py')
             
-            if os.path.exists(update_script):
-                # Prüfe ob wir bereits als root laufen
-                if os.geteuid() == 0:
-                    # Als root: Direkt ausführen
-                    result = subprocess.run([sys.executable, update_script, 'update'], 
-                                          capture_output=True, text=True, timeout=300)
-                else:
-                    # Nicht als root: Mit sudo ausführen
-                    result = subprocess.run(['sudo', sys.executable, update_script, 'update'], 
-                                          capture_output=True, text=True, timeout=300)
-                
-                # Logge die Ausgabe für Debugging
-                print(f"Update-Skript Ausgabe: {result.stdout}")
-                if result.stderr:
-                    print(f"Update-Skript Fehler: {result.stderr}")
-                
-                if result.returncode == 0:
-                    # Prüfe ob wirklich ein Update durchgeführt wurde
-                    if "System ist bereits aktuell" in result.stdout:
-                        return {'success': True, 'message': 'System ist bereits aktuell'}
-                    else:
-                        return {'success': True, 'message': 'Update erfolgreich abgeschlossen'}
-                else:
-                    error_msg = result.stderr if result.stderr else result.stdout
-                    return {'error': f'Update fehlgeschlagen: {error_msg}'}
-            else:
+            if not os.path.exists(update_script):
                 return {'error': 'Update-Skript nicht gefunden'}
+            
+            # Prüfe ob wir bereits als root laufen
+            if os.geteuid() == 0:
+                # Als root: Direkt ausführen
+                cmd = [sys.executable, update_script, 'update']
+                print(f"Führe Update aus als root: {' '.join(cmd)}")
+            else:
+                # Nicht als root: Mit sudo ausführen
+                # Finde sudo-Pfad
+                sudo_paths = ['/usr/bin/sudo', '/bin/sudo', '/sbin/sudo']
+                sudo_path = None
+                
+                for path in sudo_paths:
+                    if os.path.exists(path):
+                        sudo_path = path
+                        break
+                
+                if sudo_path:
+                    cmd = [sudo_path, sys.executable, update_script, 'update']
+                    print(f"Führe Update aus mit sudo: {' '.join(cmd)}")
+                else:
+                    # Fallback: Versuche sudo über PATH zu finden
+                    cmd = ['sudo', sys.executable, update_script, 'update']
+                    print(f"Führe Update aus mit sudo (PATH): {' '.join(cmd)}")
+            
+            # Führe das Update aus
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+            
+            # Logge die Ausgabe für Debugging
+            print(f"Update-Skript Return Code: {result.returncode}")
+            print(f"Update-Skript Ausgabe: {result.stdout}")
+            if result.stderr:
+                print(f"Update-Skript Fehler: {result.stderr}")
+            
+            if result.returncode == 0:
+                # Prüfe ob wirklich ein Update durchgeführt wurde
+                if "System ist bereits aktuell" in result.stdout:
+                    return {'success': True, 'message': 'System ist bereits aktuell'}
+                elif "Update erfolgreich" in result.stdout or "Installation abgeschlossen" in result.stdout:
+                    return {'success': True, 'message': 'Update erfolgreich abgeschlossen'}
+                else:
+                    return {'success': True, 'message': 'Update durchgeführt - siehe Logs für Details'}
+            else:
+                # Detaillierte Fehleranalyse
+                error_msg = result.stderr if result.stderr else result.stdout
+                
+                if "Permission denied" in error_msg:
+                    return {'error': 'Berechtigungsfehler: Update benötigt Root-Rechte. Bitte führen Sie das Update manuell mit "sudo python3 update_system.py update" aus.'}
+                elif "No such file or directory" in error_msg:
+                    return {'error': 'Datei nicht gefunden: Update-Skript oder Abhängigkeiten fehlen.'}
+                elif "Timeout" in error_msg:
+                    return {'error': 'Update-Timeout: Das Update dauerte zu lange.'}
+                else:
+                    return {'error': f'Update fehlgeschlagen: {error_msg}'}
+                    
         except subprocess.TimeoutExpired:
-            return {'error': 'Update-Timeout: Das Update dauerte zu lange'}
+            return {'error': 'Update-Timeout: Das Update dauerte zu lange (über 5 Minuten)'}
+        except FileNotFoundError as e:
+            return {'error': f'Datei nicht gefunden: {str(e)}'}
+        except PermissionError as e:
+            return {'error': f'Berechtigungsfehler: {str(e)}'}
         except Exception as e:
             return {'error': f'Unerwarteter Fehler: {str(e)}'}
         finally:
