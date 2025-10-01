@@ -12,7 +12,7 @@ def setup_sudoers():
     """Konfiguriert sudo-Berechtigungen für DeviceBox-Updates"""
     
     # Service-Benutzer ermitteln
-    service_user = os.getenv('SERVICE_USER', 'musikwieland')
+    service_user = os.getenv('SERVICE_USER', 'pi')
     
     print(f"Konfiguriere sudo-Berechtigungen für Benutzer: {service_user}")
     
@@ -69,7 +69,7 @@ def setup_sudoers():
 
 def test_sudo_access():
     """Testet sudo-Zugriff für DeviceBox-Updates"""
-    service_user = os.getenv('SERVICE_USER', 'musikwieland')
+    service_user = os.getenv('SERVICE_USER', 'pi')
     
     print(f"Teste sudo-Zugriff für Benutzer: {service_user}")
     

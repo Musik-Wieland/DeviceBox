@@ -7,7 +7,7 @@ Update fehlgeschlagen: Unerwarteter Fehler: [Errno 2] No such file or directory:
 ```
 
 ## Ursache
-Der DeviceBox-Service läuft als normaler Benutzer (`musikwieland`), aber das Update-System benötigt Root-Rechte für:
+Der DeviceBox-Service läuft als normaler Benutzer (`pi`), aber das Update-System benötigt Root-Rechte für:
 - Backup-Erstellung in `/opt/devicebox_backup_*`
 - Installation neuer Dateien in `/opt/devicebox`
 - Service-Neustart
@@ -25,21 +25,21 @@ sudo python3 /opt/devicebox/setup_sudoers.py
 
 1. **Erstelle sudoers-Eintrag:**
    ```bash
-   sudo nano /etc/sudoers.d/devicebox_musikwieland
+   sudo nano /etc/sudoers.d/devicebox_pi
    ```
 
 2. **Füge folgenden Inhalt hinzu:**
    ```
-   # DeviceBox Update-Berechtigungen für musikwieland
-   musikwieland ALL=(ALL) NOPASSWD: /usr/bin/python3 /opt/devicebox/update_system.py update
-   musikwieland ALL=(ALL) NOPASSWD: /usr/bin/python3 /opt/devicebox/update_system.py check
-   musikwieland ALL=(ALL) NOPASSWD: /opt/devicebox/venv/bin/python /opt/devicebox/update_system.py update
-   musikwieland ALL=(ALL) NOPASSWD: /opt/devicebox/venv/bin/python /opt/devicebox/update_system.py check
+   # DeviceBox Update-Berechtigungen für pi
+   pi ALL=(ALL) NOPASSWD: /usr/bin/python3 /opt/devicebox/update_system.py update
+   pi ALL=(ALL) NOPASSWD: /usr/bin/python3 /opt/devicebox/update_system.py check
+   pi ALL=(ALL) NOPASSWD: /opt/devicebox/venv/bin/python /opt/devicebox/update_system.py update
+   pi ALL=(ALL) NOPASSWD: /opt/devicebox/venv/bin/python /opt/devicebox/update_system.py check
    ```
 
 3. **Setze korrekte Berechtigungen:**
    ```bash
-   sudo chmod 440 /etc/sudoers.d/devicebox_musikwieland
+   sudo chmod 440 /etc/sudoers.d/devicebox_pi
    ```
 
 4. **Validiere sudoers-Syntax:**
@@ -51,7 +51,7 @@ sudo python3 /opt/devicebox/setup_sudoers.py
 
 ```bash
 # Teste sudo-Zugriff
-sudo -u musikwieland sudo -n /usr/bin/python3 /opt/devicebox/update_system.py check
+sudo -u pi sudo -n /usr/bin/python3 /opt/devicebox/update_system.py check
 ```
 
 ### Service neu starten
@@ -106,10 +106,10 @@ sudo systemctl restart devicebox
 ### Sudoers-Syntax-Fehler
 ```bash
 # Validiere sudoers-Datei
-sudo visudo -c -f /etc/sudoers.d/devicebox_musikwieland
+sudo visudo -c -f /etc/sudoers.d/devicebox_pi
 
 # Falls Fehler: Datei bearbeiten
-sudo visudo /etc/sudoers.d/devicebox_musikwieland
+sudo visudo /etc/sudoers.d/devicebox_pi
 ```
 
 ### Service startet nicht
